@@ -1,0 +1,44 @@
+# Mandates (BUILD_BRIEF §5.2): a common block plus a style block, 300-400 words
+# each (tests/test_prompts.py enforces the range). DRAFT for team review; freeze
+# before production. `{style_block}` is replaced by the mandate's style text.
+language: en
+
+common_block: |
+  Fund X is a long-only global equity fund. Its benchmark is the MSCI ACWI Index (net dividends reinvested, in US dollars). You are the portfolio manager responsible for constructing the fund's portfolio for the coming quarter, and the investment committee will review your proposal against the fund's mandate.
+
+  Investment philosophy:
+  {style_block}
+
+  Portfolio construction rules:
+  - Hold exactly 10 stocks. Each position must be between 5% and 15% of the portfolio, and the weights must sum to 100%.
+  - Spread the portfolio across at least four different GICS sectors.
+  - Every holding must have a market capitalisation of at least US$5 billion and adequate daily trading liquidity for an institutional fund of this kind.
+  - Only listed common equity is eligible. Exchange-traded funds, investment trusts, preferred shares, bonds and derivatives are not permitted. Depositary receipts are acceptable where they represent ordinary shares.
+  - There is no tracking-error constraint, so the portfolio may differ substantially from the benchmark in countries, sectors and individual names.
+  - The fund rebalances quarterly, so every holding should be appropriate to hold for at least the next three months.
+
+  The fund's investors are long-term institutional clients. They expect the stated philosophy to be visible in the measurable characteristics of the portfolio, not only in its description, and they review the portfolio's exposures each quarter.
+
+  Deliverable: list the ten holdings. For each holding, state its ticker, the exchange on which that ticker trades, the company name and its portfolio weight. Then explain briefly how the portfolio as a whole meets the investment philosophy and each of the construction rules above.
+
+mandates:
+  VALUE:
+    label: "Value mandate"
+    target_factor: value
+    style_block: |
+      Fund X follows a disciplined value philosophy. It seeks companies trading at low valuations relative to their fundamentals: low price-to-book ratios, low price-to-earnings ratios and high cash-flow yields. The portfolio should carry materially more value exposure than the benchmark. Avoid value traps: prefer cheap companies whose balance sheets, earnings power and cash generation suggest the discount is not permanent, rather than businesses that are cheap because they are in structural decline.
+  QUALITY:
+    label: "Quality mandate"
+    target_factor: quality
+    style_block: |
+      Fund X follows a quality philosophy. It seeks highly profitable companies with high returns on equity and on assets, conservative balance sheets with low leverage, and stable, predictable earnings through the economic cycle. The portfolio should carry materially more quality exposure than the benchmark. Avoid companies whose profitability depends on one-off gains, aggressive accounting or high financial leverage.
+  MOMENTUM:
+    label: "Momentum mandate"
+    target_factor: momentum
+    style_block: |
+      Fund X follows a price momentum philosophy. It seeks the stocks with the strongest price performance over the past 12 months excluding the most recent month, measured as of today. The portfolio should carry materially more momentum exposure than the benchmark. Base the selection on the most recent performance data available as of today rather than on long-standing reputations, and avoid stocks whose strong performance has already reversed.
+  UNCONSTRAINED:
+    label: "Unconstrained mandate"
+    target_factor: null
+    style_block: |
+      Fund X has no style bias. Select the ten stocks you expect to deliver the best risk-adjusted returns relative to the benchmark over the coming quarters, using whatever combination of fundamental, valuation, quality and market considerations you judge most appropriate. The portfolio should reflect your highest-conviction views rather than any predetermined factor tilt.

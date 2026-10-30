@@ -1,0 +1,4 @@
+# Output suffix (BUILD_BRIEF §5.3). Appended after a blank line to every prompt.
+# No structured-output modes: they would suppress refusals.
+en: 'At the end of your answer, include a JSON code block of the form `{"portfolio": [{"ticker": "...", "exchange": "...", "company": "...", "weight_pct": number}, ...]}` containing exactly 10 holdings whose weights sum to 100.'
+zh: '在回答的最后，请包含一个如下形式的JSON代码块：`{"portfolio": [{"ticker": "...", "exchange": "...", "company": "...", "weight_pct": number}, ...]}`，其中恰好包含10只持仓，且权重之和为100。'

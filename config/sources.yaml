@@ -1,0 +1,52 @@
+# Primary -> fallback per input (BUILD_BRIEF §2.2). `aim verify` probes each
+# candidate in order, picks the first that passes, and records the choice in
+# source_log. `required: true` inputs halt the pipeline when no candidate works.
+#
+# Each candidate names a logical table in wrds_schema.yaml.
+
+inputs:
+  prices_na:
+    required: true
+    needs_current: true
+    candidates: [comp_secd]
+    validation_only: [crsp_dsf_v2]
+  prices_global:
+    required: true
+    needs_current: true
+    candidates: [comp_g_secd, ds_primqtri]
+  fx:
+    required: true
+    needs_current: true
+    candidates: [comp_g_exrt_dly, ds_fx]
+  rf:
+    required: true
+    needs_current: false          # forward-filled with rf_filled = True
+    candidates: [ff_factors_daily, crsp_q_treasuries]
+    prefer_most_current: true
+  fundamentals_na:
+    required: true
+    candidates: [snapshot_na, comp_fund_na]
+  fundamentals_global:
+    required: true
+    candidates: [snapshot_global, comp_fund_global]
+  forward_earnings:
+    required: false
+    candidates: [ibes_statsum, tr_ibes_statsum]
+  security_master:
+    required: true
+    candidates: [ciq_master, comp_security_master]
+  gics:
+    required: true
+    candidates: [comp_company]
+  index_membership:
+    required: false
+    candidates: [ds_msci_acwi, comp_idxcst]
+  finratio:
+    required: false
+    candidates: [wrds_finratio]
+  news:
+    required: false
+    candidates: [ravenpack, ibes_coverage_proxy]
+  crsp_validation:
+    required: false
+    candidates: [crsp_dsf_v2]

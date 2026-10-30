@@ -1,0 +1,357 @@
+# Logical field -> physical column (BUILD_BRIEF §0.6).
+#
+# `tables` lists every logical table: library, table and, per logical field, the
+# candidate physical column names in order of preference. `aim verify` runs
+# db.describe_table() on each, picks the first candidate that exists and writes
+# the result to the `resolved` block of config/wrds_schema.resolved.yaml.
+# A renamed WRDS column is therefore a one-line fix here.
+#
+# Fields marked `optional: [...]` may be absent without failing the probe.
+
+tables:
+  comp_secd:
+    library: comp
+    table: secd
+    date_field: date
+    fields:
+      gvkey: [gvkey]
+      iid: [iid]
+      date: [datadate]
+      price: [prccd]
+      adj: [ajexdi]
+      trfd: [trfd]
+      shares: [cshoc]
+      currency: [curcdd]
+      exchg: [exchg]
+      tpci: [tpci]
+      ticker: [tic]
+    optional: [ticker]
+  comp_g_secd:
+    library: comp
+    table: g_secd
+    date_field: date
+    fields:
+      gvkey: [gvkey]
+      iid: [iid]
+      date: [datadate]
+      price: [prccd]
+      adj: [ajexdi]
+      trfd: [trfd]
+      shares: [cshoc]
+      currency: [curcdd]
+      exchg: [exchg]
+      tpci: [tpci]
+      ticker: [tic]
+    optional: [ticker]
+  ds_primqtri:
+    library: tr_ds_equities
+    table: ds2primqtri
+    date_field: date
+    fields:
+      infocode: [infocode]
+      date: [marketdate, valuedate]
+      ri: [ri]
+  ds_fx:
+    library: tr_ds_equities
+    table: ds2fxrate
+    date_field: date
+    fields:
+      date: [exratedate, marketdate]
+      from_currency: [fromcurrcode]
+      to_currency: [tocurrcode]
+      rate: [midrate, exrate]
+  comp_g_exrt_dly:
+    library: comp
+    table: g_exrt_dly
+    date_field: date
+    fields:
+      date: [datadate]
+      from_currency: [fromcurd]
+      to_currency: [tocurd]
+      rate: [exratd]
+  ff_factors_daily:
+    library: ff
+    table: factors_daily
+    date_field: date
+    fields:
+      date: [date]
+      rf: [rf]
+  crsp_q_treasuries:
+    library: crsp_q_treasuries
+    table: tfz_dly_rf2
+    date_field: date
+    fields:
+      date: [caldt]
+      rf: [tdyld, tdretadj]
+  snapshot_na:                    # point-in-time annual fundamentals
+    library: comp_snapshot
+    table: csco_afnd
+    key_table: csco_akey
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      pit_start: [pitdate1, pitdate, pit_start]
+      pit_end: [pitdate2, pit_end]
+      currency: [curcd]
+      ceq: [ceq]
+      ib: [ib]
+      at: [at]
+      revt: [revt]
+      cogs: [cogs]
+      dltt: [dltt]
+      dlc: [dlc]
+      oancf: [oancf]
+      indfmt: [indfmt]
+      datafmt: [datafmt]
+      consol: [consol]
+    optional: [currency, indfmt, datafmt, consol, pit_end]
+  snapshot_na_q:                  # point-in-time quarterly book equity
+    library: comp_snapshot
+    table: csco_ifndq
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      pit_start: [pitdate1, pitdate, pit_start]
+      pit_end: [pitdate2, pit_end]
+      currency: [curcdq, curcd]
+      ceq: [ceqq]
+    optional: [currency, pit_end]
+  snapshot_global:
+    library: comp_snapshot
+    table: null                   # discovered by `aim verify` (global prefix/description)
+    date_field: datadate
+    discover_patterns: ["^csg.*afnd", "^g_.*afnd", "global.*afnd", "^csco_g.*afnd"]
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      pit_start: [pitdate1, pitdate, pit_start]
+      pit_end: [pitdate2, pit_end]
+      currency: [curcd]
+      ceq: [ceq]
+      ib: [ib]
+      at: [at]
+      revt: [revt]
+      cogs: [cogs]
+      dltt: [dltt]
+      dlc: [dlc]
+      oancf: [oancf]
+    optional: [currency, pit_end]
+  comp_fund_na:
+    library: comp
+    table: funda
+    quarterly_table: fundq
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      rdq: [rdq]
+      fyear: [fyear]
+      currency: [curcd]
+      ceq: [ceq]
+      seq: [seq]
+      ib: [ib]
+      at: [at]
+      revt: [revt]
+      cogs: [cogs]
+      dltt: [dltt]
+      dlc: [dlc]
+      oancf: [oancf]
+      indfmt: [indfmt]
+      datafmt: [datafmt]
+      popsrc: [popsrc]
+      consol: [consol]
+    optional: [rdq, seq]
+  comp_fund_global:
+    library: comp
+    table: g_funda
+    quarterly_table: g_fundq
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      rdq: [rdq]
+      fyear: [fyear]
+      currency: [curcd]
+      ceq: [ceq]
+      seq: [seq]
+      ib: [ib]
+      at: [at]
+      revt: [revt]
+      cogs: [cogs]
+      dltt: [dltt]
+      dlc: [dlc]
+      oancf: [oancf]
+      indfmt: [indfmt]
+      datafmt: [datafmt]
+      popsrc: [popsrc]
+      consol: [consol]
+    optional: [rdq, seq]
+  comp_fundq_na:
+    library: comp
+    table: fundq
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      rdq: [rdq]
+      currency: [curcdq]
+      ceq: [ceqq]
+      indfmt: [indfmt]
+      datafmt: [datafmt]
+      popsrc: [popsrc]
+      consol: [consol]
+    optional: [rdq]
+  comp_fundq_global:
+    library: comp
+    table: g_fundq
+    date_field: datadate
+    fields:
+      gvkey: [gvkey]
+      datadate: [datadate]
+      rdq: [rdq]
+      currency: [curcdq]
+      ceq: [ceqq]
+      indfmt: [indfmt]
+      datafmt: [datafmt]
+      popsrc: [popsrc]
+      consol: [consol]
+    optional: [rdq]
+  comp_ex_codes:
+    library: comp
+    table: r_ex_codes
+    fields:
+      exchg: [exchgcd, exchg]
+      description: [exchgdesc, exchgnm]
+  ibes_statsum:
+    library: ibes
+    table: statsum_epsus
+    intl_table: statsum_epsint
+    date_field: statpers
+    fields:
+      ticker: [ticker]
+      cusip: [cusip]
+      statpers: [statpers]
+      fpi: [fpi]
+      fpedats: [fpedats]
+      meanest: [meanest]
+      numest: [numest]
+      measure: [measure]
+      fiscalp: [fiscalp]
+      currency: [curcode, curr_act]
+    optional: [currency, measure, fiscalp]
+  tr_ibes_statsum:
+    library: tr_ibes
+    table: statsum_epsus
+    intl_table: statsum_epsint
+    date_field: statpers
+    fields:
+      ticker: [ticker]
+      cusip: [cusip]
+      statpers: [statpers]
+      fpi: [fpi]
+      meanest: [meanest]
+      numest: [numest]
+  ciq_master:
+    library: ciq
+    table: ciqtradingitem
+    security_table: ciqsecurity
+    company_table: ciqcompany
+    exchange_table: ciqexchange
+    gvkey_link: {library: ciq_common, table: wrds_gvkey}
+    fields:
+      tradingitemid: [tradingitemid]
+      securityid: [securityid]
+      ticker: [tickersymbol]
+      exchangeid: [exchangeid]
+      primaryflag: [primaryflag]
+      status: [tradingitemstatusid]
+  comp_security_master:
+    library: comp
+    table: security
+    global_table: g_security
+    fields:
+      gvkey: [gvkey]
+      iid: [iid]
+      ticker: [tic]
+      exchg: [exchg]
+      isin: [isin]
+      sedol: [sedol]
+      cusip: [cusip]
+      tpci: [tpci]
+      dlrsni: [dlrsni]
+      excntry: [excntry]
+    optional: [isin, sedol, cusip, dlrsni, excntry]
+  comp_company:
+    library: comp
+    table: company
+    global_table: g_company
+    fields:
+      gvkey: [gvkey]
+      name: [conm]
+      fic: [fic]
+      loc: [loc]
+      gsector: [gsector]
+      ggroup: [ggroup]
+      gind: [gind]
+      gsubind: [gsubind]
+      priusa: [priusa]
+      prican: [prican]
+      prirow: [prirow]
+    optional: [priusa, prican, prirow]
+  ds_msci_acwi:
+    library: tr_ds_equities
+    table: ds2constmth
+    index_table: ds2indexlist
+    fields:
+      indexcode: [indexlistintcode, indexcode]
+      infocode: [infocode]
+      date: [marketdate, constdate]
+    index_name_patterns: ["MSCI AC WORLD", "MSCI ACWI"]
+  comp_idxcst:
+    library: comp
+    table: idxcst_his
+    index_table: idx_index
+    fields:
+      gvkey: [gvkey]
+      iid: [iid]
+      gvkeyx: [gvkeyx]
+      from_date: [from]
+      thru_date: [thru]
+  wrds_finratio:
+    library: wrdsapps_finratio
+    table: firm_ratio
+    fields:
+      gvkey: [gvkey]
+      public_date: [public_date]
+      roa: [roa]
+      roe: [roe]
+      debt_assets: [debt_assets]
+    optional: [debt_assets]
+  ravenpack:
+    library: ravenpack_dj
+    table: rpa_djpr_equities_{year}
+    mapping: {library: ravenpack_common, table: rp_entity_mapping}
+    date_field: date
+    fields:
+      entity: [rp_entity_id]
+      timestamp: [timestamp_utc, rpa_date_utc]
+      relevance: [relevance]
+  ibes_coverage_proxy:
+    library: ibes
+    table: statsum_epsus
+    fields:
+      numest: [numest]
+  crsp_dsf_v2:
+    library: crsp
+    table: dsf_v2
+    link_table: {library: crsp, table: ccmxpf_lnkhist}
+    date_field: date
+    fields:
+      permno: [permno]
+      date: [dlycaldt]
+      ret: [dlyret]
+      price: [dlyprc]
+      shares: [shrout, dlycap]
+    optional: [shares]
