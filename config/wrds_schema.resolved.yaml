@@ -1,0 +1,416 @@
+# Written by `aim verify`: the physical column chosen for each logical field.
+# Edit config/wrds_schema.yaml (candidates), not this file.
+resolved:
+  comp_secd:
+    ok: true
+    library: comp
+    table: secd
+    columns:
+      gvkey: gvkey
+      iid: iid
+      date: datadate
+      price: prccd
+      adj: ajexdi
+      trfd: trfd
+      shares: cshoc
+      currency: curcdd
+      exchg: exchg
+      tpci: tpci
+      ticker: tic
+    missing: []
+    error: null
+    effective_latest_date: '2026-10-28'
+    raw_max_date: '2027-11-12'
+    future_rows_discarded: 1801
+    freshness_detail: n=21870 on effective date; discarded 1801 future-dated rows
+      on 68 dates
+  comp_g_secd:
+    ok: true
+    library: comp
+    table: g_secd
+    columns:
+      gvkey: gvkey
+      iid: iid
+      date: datadate
+      price: prccd
+      adj: ajexdi
+      trfd: trfd
+      shares: cshoc
+      currency: curcdd
+      exchg: exchg
+      tpci: tpci
+    missing: []
+    error: null
+    effective_latest_date: '2026-10-28'
+    raw_max_date: '2028-12-01'
+    future_rows_discarded: 5547
+    freshness_detail: n=84538 on effective date; discarded 5547 future-dated rows
+      on 154 dates
+  ds_primqtri:
+    ok: true
+    library: tr_ds_equities
+    table: ds2primqtri
+    columns:
+      infocode: infocode
+      date: marketdate
+      ri: ri
+    missing: []
+    error: null
+    effective_latest_date: '2026-10-28'
+    raw_max_date: '2026-10-28'
+    future_rows_discarded: 0
+    freshness_detail: n=75552 on effective date; discarded 0 future-dated rows on
+      0 dates
+  ds_fx:
+    ok: false
+    library: tr_ds_equities
+    table: ds2fxrate
+    columns:
+      date: exratedate
+      rate: midrate
+    missing:
+    - from_currency
+    - to_currency
+    error: 'missing required fields: from_currency, to_currency'
+  comp_g_exrt_dly:
+    ok: true
+    library: comp
+    table: g_exrt_dly
+    columns:
+      date: datadate
+      from_currency: fromcurd
+      to_currency: tocurd
+      rate: exratd
+    missing: []
+    error: null
+    effective_latest_date: '2026-10-28'
+    raw_max_date: '2026-10-28'
+    future_rows_discarded: 0
+    freshness_detail: n=152 on effective date; discarded 0 future-dated rows on 0
+      dates
+  ff_factors_daily:
+    ok: true
+    library: ff
+    table: factors_daily
+    columns:
+      date: date
+      rf: rf
+    missing: []
+    error: null
+    effective_latest_date: '2026-09-30'
+    raw_max_date: '2026-09-30'
+    future_rows_discarded: 0
+    freshness_detail: n=1 on effective date; discarded 0 future-dated rows on 0 dates
+  crsp_q_treasuries:
+    ok: true
+    library: crsp_q_treasuries
+    table: tfz_dly_rf2
+    columns:
+      date: caldt
+      rf: tdyld
+    missing: []
+    error: null
+    effective_latest_date: null
+    raw_max_date: null
+    future_rows_discarded: 0
+    freshness_detail: no rows
+  snapshot_na:
+    ok: false
+    library: comp_snapshot
+    table: csco_afnd
+    columns: {}
+    missing:
+    - gvkey
+    - datadate
+    - pit_start
+    - ceq
+    - ib
+    - at
+    - revt
+    - cogs
+    - dltt
+    - dlc
+    - oancf
+    error: 'missing required fields: gvkey, datadate, pit_start, ceq, ib, at, revt,
+      cogs, dltt, dlc, oancf'
+  snapshot_na_q:
+    ok: false
+    library: comp_snapshot
+    table: csco_ifndq
+    columns: {}
+    missing:
+    - gvkey
+    - datadate
+    - pit_start
+    - ceq
+    error: 'missing required fields: gvkey, datadate, pit_start, ceq'
+  snapshot_global:
+    ok: false
+    library: comp_snapshot
+    table: null
+    columns: {}
+    missing: []
+    error: no matching table found
+  comp_fund_na:
+    ok: true
+    library: comp
+    table: funda
+    columns:
+      gvkey: gvkey
+      datadate: datadate
+      fyear: fyear
+      currency: curcd
+      ceq: ceq
+      seq: seq
+      ib: ib
+      at: at
+      revt: revt
+      cogs: cogs
+      dltt: dltt
+      dlc: dlc
+      oancf: oancf
+      indfmt: indfmt
+      datafmt: datafmt
+      popsrc: popsrc
+      consol: consol
+    missing: []
+    error: null
+    effective_latest_date: '2026-08-31'
+    raw_max_date: '2026-09-30'
+    future_rows_discarded: 0
+    freshness_detail: n=78 on effective date; discarded 0 future-dated rows on 0 dates
+  comp_fund_global:
+    ok: true
+    library: comp
+    table: g_funda
+    columns:
+      gvkey: gvkey
+      datadate: datadate
+      fyear: fyear
+      currency: curcd
+      ceq: ceq
+      seq: seq
+      ib: ib
+      at: at
+      revt: revt
+      cogs: cogs
+      dltt: dltt
+      dlc: dlc
+      oancf: oancf
+      indfmt: indfmt
+      datafmt: datafmt
+      popsrc: popsrc
+      consol: consol
+    missing: []
+    error: null
+    effective_latest_date: '2026-08-31'
+    raw_max_date: '2026-09-30'
+    future_rows_discarded: 0
+    freshness_detail: n=133 on effective date; discarded 0 future-dated rows on 0
+      dates
+  comp_fundq_na:
+    ok: true
+    library: comp
+    table: fundq
+    columns:
+      gvkey: gvkey
+      datadate: datadate
+      rdq: rdq
+      currency: curcdq
+      ceq: ceqq
+      indfmt: indfmt
+      datafmt: datafmt
+      popsrc: popsrc
+      consol: consol
+    missing: []
+    error: null
+    effective_latest_date: '2026-09-30'
+    raw_max_date: '2026-09-30'
+    future_rows_discarded: 0
+    freshness_detail: n=8012 on effective date; discarded 0 future-dated rows on 0
+      dates
+  comp_fundq_global:
+    ok: true
+    library: comp
+    table: g_fundq
+    columns:
+      gvkey: gvkey
+      datadate: datadate
+      currency: curcdq
+      ceq: ceqq
+      indfmt: indfmt
+      datafmt: datafmt
+      popsrc: popsrc
+      consol: consol
+    missing: []
+    error: null
+    effective_latest_date: '2026-09-30'
+    raw_max_date: '2026-09-30'
+    future_rows_discarded: 0
+    freshness_detail: n=2071 on effective date; discarded 0 future-dated rows on 0
+      dates
+  comp_ex_codes:
+    ok: true
+    library: comp
+    table: r_ex_codes
+    columns:
+      exchg: exchgcd
+      description: exchgdesc
+    missing: []
+    error: null
+  ibes_statsum:
+    ok: true
+    library: ibes
+    table: statsum_epsus
+    columns:
+      ticker: ticker
+      cusip: cusip
+      statpers: statpers
+      fpi: fpi
+      fpedats: fpedats
+      meanest: meanest
+      numest: numest
+      measure: measure
+      fiscalp: fiscalp
+      currency: curcode
+    missing: []
+    error: null
+    effective_latest_date: '2026-08-20'
+    raw_max_date: '2026-08-20'
+    future_rows_discarded: 0
+    freshness_detail: n=35205 on effective date; discarded 0 future-dated rows on
+      0 dates
+  tr_ibes_statsum:
+    ok: true
+    library: tr_ibes
+    table: statsum_epsus
+    columns:
+      ticker: ticker
+      cusip: cusip
+      statpers: statpers
+      fpi: fpi
+      meanest: meanest
+      numest: numest
+    missing: []
+    error: null
+    effective_latest_date: '2026-08-20'
+    raw_max_date: '2026-08-20'
+    future_rows_discarded: 0
+    freshness_detail: n=35205 on effective date; discarded 0 future-dated rows on
+      0 dates
+  ciq_master:
+    ok: true
+    library: ciq
+    table: ciqtradingitem
+    columns:
+      tradingitemid: tradingitemid
+      securityid: securityid
+      ticker: tickersymbol
+      exchangeid: exchangeid
+      primaryflag: primaryflag
+      status: tradingitemstatusid
+    missing: []
+    error: null
+  comp_security_master:
+    ok: true
+    library: comp
+    table: security
+    columns:
+      gvkey: gvkey
+      iid: iid
+      ticker: tic
+      exchg: exchg
+      isin: isin
+      sedol: sedol
+      cusip: cusip
+      tpci: tpci
+      dlrsni: dlrsni
+      excntry: excntry
+    missing: []
+    error: null
+  comp_company:
+    ok: true
+    library: comp
+    table: company
+    columns:
+      gvkey: gvkey
+      name: conm
+      fic: fic
+      loc: loc
+      gsector: gsector
+      ggroup: ggroup
+      gind: gind
+      gsubind: gsubind
+      priusa: priusa
+      prican: prican
+      prirow: prirow
+    missing: []
+    error: null
+  ds_msci_acwi:
+    ok: false
+    library: tr_ds_equities
+    table: ds2constmth
+    columns:
+      indexcode: indexlistintcode
+      infocode: infocode
+    missing:
+    - date
+    error: 'missing required fields: date'
+  comp_idxcst:
+    ok: true
+    library: comp
+    table: idxcst_his
+    columns:
+      gvkey: gvkey
+      iid: iid
+      gvkeyx: gvkeyx
+      from_date: from
+      thru_date: thru
+    missing: []
+    error: null
+  wrds_finratio:
+    ok: true
+    library: wrdsapps_finratio
+    table: firm_ratio
+    columns:
+      gvkey: gvkey
+      public_date: public_date
+      roa: roa
+      roe: roe
+      debt_assets: debt_assets
+    missing: []
+    error: null
+  ravenpack:
+    ok: true
+    library: ravenpack_dj
+    table: rpa_djpr_equities_2026
+    columns:
+      entity: rp_entity_id
+      timestamp: timestamp_utc
+      relevance: relevance
+    missing: []
+    error: null
+  ibes_coverage_proxy:
+    ok: true
+    library: ibes
+    table: statsum_epsus
+    columns:
+      numest: numest
+    missing: []
+    error: null
+  crsp_dsf_v2:
+    ok: true
+    library: crsp
+    table: dsf_v2
+    columns:
+      permno: permno
+      date: dlycaldt
+      ret: dlyret
+      price: dlyprc
+      shares: shrout
+    missing: []
+    error: null
+    effective_latest_date: null
+    raw_max_date: null
+    future_rows_discarded: 0
+    freshness_detail: no rows
