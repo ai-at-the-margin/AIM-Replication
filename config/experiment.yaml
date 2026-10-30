@@ -1,0 +1,99 @@
+# Experiment design (BUILD_BRIEF §1.1, §5, §6). Every value the paper leaves open
+# lives here and is listed in docs/DEVIATIONS.md.
+
+experiment_name: ai-at-the-margin-v3
+
+stages:
+  A:
+    description: "Free-form framings, search off"
+    prompt_family: freeform
+    prompts: [L1, L2, L3, L4]
+    reps: 30
+    search_enabled: false
+    batch_allowed: true
+  B:
+    description: "Institutional mandates, search off"
+    prompt_family: mandates
+    prompts: [VALUE, QUALITY, MOMENTUM, UNCONSTRAINED]
+    reps: 15
+    search_enabled: false
+    batch_allowed: true
+  C:
+    description: "Principal prompts with web search available"
+    prompt_family: mixed
+    prompts: [L1, L2, L3, L4, VALUE, QUALITY, MOMENTUM, UNCONSTRAINED]
+    reps: 15
+    search_enabled: true
+    batch_allowed: false
+
+optional_arms:
+  mandarin:
+    enabled: false
+    stage: A
+    language: zh
+    reps: 30
+  consumer_proxy:
+    enabled: false        # adds `chat-latest` to Stage A (non-reproducible snapshot)
+  anthropic_basic_search:
+    enabled: false        # Stage C robustness arm with web_search_20250305 (no dynamic filtering)
+    reps: 15
+
+search_tools:
+  openai:
+    default: {type: web_search}
+    tool_choice: auto
+    include: ["web_search_call.action.sources"]
+  anthropic:
+    default:
+      version: web_search_20260318
+      tool: {type: web_search_20260318, name: web_search, max_uses: 10, response_inclusion: full}
+    basic:
+      version: web_search_20250305
+      tool: {type: web_search_20250305, name: web_search, max_uses: 10}
+
+request:
+  openai:
+    store: false
+    reasoning_summary: auto     # asks for reasoning summaries; does not change effort
+  anthropic:
+    max_tokens: 32000
+    pause_turn_max: 6
+
+collection:
+  concurrency: {openai: 8, anthropic: 8}
+  requests_per_minute: {openai: 300, anthropic: 200}
+  max_attempts: 6
+  base_delay_s: 2.0
+  max_delay_s: 120.0
+  timeout_s: 600
+  budget_cap_usd: {A: 250.0, B: 150.0, C: 400.0}
+
+# Token assumptions for the dry-run estimate; replaced by pilot measurements
+# (`aim plan --dry-run` re-estimates from collected calls once any exist).
+token_assumptions:
+  output_tokens_by_role:
+    flagship: 4500
+    mainstream: 3500
+    mid: 2500
+    small: 1800
+    previous_flagship: 4000
+    two_back: 3000
+    consumer_proxy: 2500
+  searches_per_call_when_enabled: 4
+  search_content_tokens_per_search: 3500
+  search_invocation_rate_assumed: 0.6
+
+collection_window: {start: null, end: null}   # filled when collection starts
+asof_date: null                                # last trading day of the window
+
+analysis:
+  bootstrap_draws: 2000
+  permutation_draws: 5000
+  seed: 20261030
+  consensus_threshold: 0.5
+  compliance:
+    target_exposure_min: 0.25
+    max_weight: 0.15
+    min_sectors: 4
+    min_mcap_usd: 5.0e9
+  staleness_lags_months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]

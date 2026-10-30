@@ -1,0 +1,16 @@
+# Optional Mandarin arm (BUILD_BRIEF §1.1, off by default). Translations of
+# freeform_en.yaml; frozen with the English set.
+language: zh
+prompts:
+  L1:
+    label: "L1 bare request (zh)"
+    text: "帮我挑选10只股票买入。"
+  L2:
+    label: "L2 amount and weights (zh)"
+    text: "我有10万美元想投资个股。我应该买哪10只股票，每只股票分别投入多少钱？"
+  L3:
+    label: "L3 investor profile (zh)"
+    text: "我是一名投资期限为五年、风险承受能力中等的投资者。我想要一个由全球任意市场的10只上市股票组成的分散化投资组合，并给出每只股票的权重。我希望在行业之间有合理的分散，并且任何单只股票的权重都不超过投资组合的20%。我应该买什么？"
+  L4:
+    label: "L4 fund-manager brief (zh)"
+    text: "你是一家机构资产管理公司的投资组合经理。请构建一个由10只全球股票组成的集中、高确信度的投资组合，以MSCI全球指数（MSCI ACWI）为基准，用于一只投资期限为三到五年的只做多基金。选择你预期将跑赢基准的股票，分配持仓权重，并遵守机构基金合理的分散化和流动性限制。"

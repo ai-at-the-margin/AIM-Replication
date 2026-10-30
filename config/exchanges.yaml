@@ -1,0 +1,45 @@
+# Canonical exchange codes (MIC-style) used by the resolver (BUILD_BRIEF §6.4.1).
+#
+# aliases       words a model may write in the "exchange" field (matched case-insensitively,
+#               punctuation ignored)
+# suffixes      ticker suffixes such as 0700.HK / ASML.AS / NOVO-B.CO, plus Bloomberg codes
+#               used as "ASML NA"
+# ciq_symbols   Capital IQ ciqexchange.exchangesymbol values
+# comp_desc     substrings of Compustat r_ex_codes descriptions; `aim verify` maps
+#               Compustat exchg codes onto these canonical codes at run time
+# comp_exchg    Compustat codes known in advance (US only; the rest come from verify)
+
+exchanges:
+  XNAS: {name: NASDAQ, country: USA, us: true, aliases: [nasdaq, nasdaqgs, nasdaqgm, nasdaqcm, nasdaq global select, nasdaq global market, nasdaq stock market, nms, ngs], suffixes: [OQ, UW, UQ], ciq_symbols: [NasdaqGS, NasdaqGM, NasdaqCM], comp_desc: [NASDAQ], comp_exchg: [14]}
+  XNYS: {name: NYSE, country: USA, us: true, aliases: [nyse, new york stock exchange, new york, nyse arca, arca], suffixes: [UN], ciq_symbols: [NYSE, NYSEArca], comp_desc: [New York Stock Exchange], comp_exchg: [11]}
+  XASE: {name: NYSE American, country: USA, us: true, aliases: [nyse american, nyse mkt, amex, american stock exchange], suffixes: [UA], ciq_symbols: [NYSEAM], comp_desc: [American Stock Exchange, NYSE American], comp_exchg: [12]}
+  XTSE: {name: Toronto, country: CAN, aliases: [tsx, toronto, toronto stock exchange, tse toronto], suffixes: [TO, CT, TSX], ciq_symbols: [TSX], comp_desc: [Toronto]}
+  XLON: {name: London, country: GBR, aliases: [lse, london stock exchange, london, lon], suffixes: [L, LN, LON], ciq_symbols: [LSE], comp_desc: [London]}
+  XETR: {name: Xetra, country: DEU, aliases: [xetra, frankfurt, fwb, deutsche borse, deutsche boerse, frankfurt stock exchange, etr, ger], suffixes: [DE, GY, GR, F, ETR, XETRA], ciq_symbols: [XTRA, DB], comp_desc: [Xetra, Frankfurt, Deutsche]}
+  XPAR: {name: Euronext Paris, country: FRA, aliases: [euronext paris, paris, epa, paris stock exchange], suffixes: [PA, FP], ciq_symbols: [ENXTPA], comp_desc: [Paris]}
+  XAMS: {name: Euronext Amsterdam, country: NLD, aliases: [euronext amsterdam, amsterdam, ams, aex], suffixes: [AS, NA], ciq_symbols: [ENXTAM], comp_desc: [Amsterdam]}
+  XBRU: {name: Euronext Brussels, country: BEL, aliases: [euronext brussels, brussels, ebr], suffixes: [BR, BB], ciq_symbols: [ENXTBR], comp_desc: [Brussels]}
+  XMIL: {name: Borsa Italiana, country: ITA, aliases: [borsa italiana, milan, euronext milan, bit], suffixes: [MI, IM], ciq_symbols: [BIT], comp_desc: [Milan, Italian]}
+  XMAD: {name: Madrid, country: ESP, aliases: [bme, madrid, bolsa de madrid, spanish stock exchange], suffixes: [MC, SM], ciq_symbols: [BME], comp_desc: [Madrid]}
+  XSWX: {name: SIX Swiss, country: CHE, aliases: [six, six swiss exchange, swiss exchange, zurich, swx, virt-x], suffixes: [SW, SE, VX], ciq_symbols: [SWX], comp_desc: [Swiss, SIX, Zurich]}
+  XCSE: {name: Copenhagen, country: DNK, aliases: [copenhagen, nasdaq copenhagen, cph, cpse], suffixes: [CO, DC], ciq_symbols: [CPSE], comp_desc: [Copenhagen]}
+  XSTO: {name: Stockholm, country: SWE, aliases: [stockholm, nasdaq stockholm, sto, omx stockholm], suffixes: [ST], ciq_symbols: [OM], comp_desc: [Stockholm]}
+  XHEL: {name: Helsinki, country: FIN, aliases: [helsinki, nasdaq helsinki, hel], suffixes: [HE, FH], ciq_symbols: [HLSE], comp_desc: [Helsinki]}
+  XOSL: {name: Oslo, country: NOR, aliases: [oslo, oslo bors, ose], suffixes: [OL, NO], ciq_symbols: [OB], comp_desc: [Oslo]}
+  XTKS: {name: Tokyo, country: JPN, aliases: [tokyo, tokyo stock exchange, jpx, tyo, tse japan, tse prime], suffixes: [T, JP, JT], ciq_symbols: [TSE], comp_desc: [Tokyo]}
+  XHKG: {name: Hong Kong, country: HKG, aliases: [hkex, sehk, hong kong, hong kong stock exchange, hkg, hkse], suffixes: [HK], ciq_symbols: [SEHK], comp_desc: [Hong Kong]}
+  XSHG: {name: Shanghai, country: CHN, china_a: true, aliases: [shanghai, sse, shanghai stock exchange, sha, sse star market], suffixes: [SS, SH, CH], ciq_symbols: [SHSE], comp_desc: [Shanghai]}
+  XSHE: {name: Shenzhen, country: CHN, china_a: true, aliases: [shenzhen, szse, shenzhen stock exchange, she, chinext], suffixes: [SZ], ciq_symbols: [SZSE], comp_desc: [Shenzhen]}
+  XTAI: {name: Taiwan, country: TWN, aliases: [twse, taiwan stock exchange, taiwan, tpe, taipei], suffixes: [TW, TT], ciq_symbols: [TWSE], comp_desc: [Taiwan]}
+  XKRX: {name: Korea, country: KOR, aliases: [krx, korea exchange, kospi, kosdaq, korea stock exchange, kse], suffixes: [KS, KQ, KP], ciq_symbols: [KOSE, KOSDAQ], comp_desc: [Korea]}
+  XNSE: {name: NSE India, country: IND, aliases: [nse, national stock exchange of india, nse india], suffixes: [NS, IS], ciq_symbols: [NSEI], comp_desc: [National Stock Exchange of India]}
+  XBOM: {name: BSE India, country: IND, aliases: [bse, bombay stock exchange, bse india], suffixes: [BO, IB], ciq_symbols: [BSE], comp_desc: [Bombay]}
+  XASX: {name: ASX, country: AUS, aliases: [asx, australian securities exchange, australia], suffixes: [AX, AU], ciq_symbols: [ASX], comp_desc: [Australia]}
+  XSES: {name: Singapore, country: SGP, aliases: [sgx, singapore exchange, singapore], suffixes: [SI, SP], ciq_symbols: [SGX], comp_desc: [Singapore]}
+  XJSE: {name: Johannesburg, country: ZAF, aliases: [jse, johannesburg stock exchange, johannesburg], suffixes: [JO, SJ], ciq_symbols: [JSE], comp_desc: [Johannesburg]}
+  BVMF: {name: B3 Brazil, country: BRA, aliases: [b3, bovespa, bm&fbovespa, sao paulo], suffixes: [SA, BZ], ciq_symbols: [BOVESPA], comp_desc: [Sao Paulo]}
+  XMEX: {name: Mexico, country: MEX, aliases: [bmv, mexican stock exchange, mexico], suffixes: [MX, MM], ciq_symbols: [BMV], comp_desc: [Mexic]}
+  XSAU: {name: Saudi Exchange, country: SAU, aliases: [tadawul, saudi exchange, saudi stock exchange], suffixes: [SR, AB], ciq_symbols: [SASE], comp_desc: [Saudi]}
+
+# Suffixes that are share classes, never exchanges (BRK.B, BF.B, RDS.A ...)
+class_suffixes: [A, B, C, D, K, PR]

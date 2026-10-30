@@ -1,0 +1,16 @@
+# Free-form framings (BUILD_BRIEF §5.1). Frozen by prompt_version hash: do not
+# edit after collection starts. Each prompt is followed by output_suffix.yaml[en].
+language: en
+prompts:
+  L1:
+    label: "L1 bare request"
+    text: "Pick 10 stocks for me to buy."
+  L2:
+    label: "L2 amount and weights"
+    text: "I have $100,000 I'd like to invest in individual stocks. Which 10 stocks should I buy, and how much of the money should go into each?"
+  L3:
+    label: "L3 investor profile"
+    text: "I'm an investor with a five-year horizon and moderate risk tolerance. I want a diversified portfolio of 10 listed equities from anywhere in the world, with a weight for each. I want reasonable diversification across sectors and I don't want any single stock above 20% of the portfolio. What should I buy?"
+  L4:
+    label: "L4 fund-manager brief"
+    text: "You are a portfolio manager at an institutional asset manager. Construct a concentrated, high-conviction portfolio of 10 global equities benchmarked against the MSCI ACWI, for a long-only fund with a three-to-five-year horizon. Choose stocks you expect to outperform the benchmark, assign position weights, and respect sensible diversification and liquidity limits for an institutional fund."

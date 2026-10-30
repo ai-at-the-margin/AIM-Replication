@@ -1,0 +1,45 @@
+# Barra-style replica (BUILD_BRIEF §7). All windows are in trading days.
+
+winsor_pct: [0.01, 0.99]
+min_obs_fraction: 0.5           # descriptor needs >= 50% of window observations
+
+beta:
+  window: 252
+  half_life: 63
+momentum:
+  window: 504                   # W
+  lag: 21                       # L
+  half_life: 126
+  simple_12_1: {start: 252, end: 21}
+resvol:
+  weights: {dastd: 0.74, cmra: 0.16, hsigma: 0.10}
+  dastd: {window: 252, half_life: 42}
+  cmra: {months: 12, days_per_month: 21}
+  hsigma: {half_life: 63}
+  orthogonalise_to: [beta, size]
+value:
+  primary: btop
+  robustness_blend: [btop, etop, fwd_ep]
+quality:
+  sub_factors:
+    profitability: [roa, roe, gpa]
+    leverage: [neg_debt_to_assets]
+    earnings_variability: [neg_earn_var]
+    accruals: [neg_accruals]
+  earnings_variability_years: 5
+  earnings_variability_min_years: 3
+
+annual_entry_lag_days: {na: 90, global: 120}   # fallback entry rule when rdq is missing
+history:
+  universe_trading_days: 950    # covers RSTR (525) plus 18 months of staleness lags
+  fundamentals_years: 7
+
+factor_names: [size, value, quality, momentum, lowvol, resvol, beta]
+display_names:
+  size: Size
+  value: Value
+  quality: Quality
+  momentum: Momentum
+  lowvol: Low-Vol
+  resvol: ResVol
+  beta: Beta

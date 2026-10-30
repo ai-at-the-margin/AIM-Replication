@@ -1,0 +1,210 @@
+# Model roster (BUILD_BRIEF §1.2). Verified against provider docs 29 Oct 2026;
+# `aim verify` re-confirms every id against the providers' model-list endpoints.
+#
+# price_*_per_m        USD per million tokens (input / output).
+# price_verified       false = placeholder set conservatively at flagship level; the
+#                      dry-run flags these and `aim verify` reminds you to fill them in.
+# knowledge_cutoff     stated training cutoff from the model page (YYYY-MM or null).
+# reasoning_effort_default
+#                      what the provider documents as the default; we never override it.
+#                      The effective value is read back from each response when exposed.
+# request_extra        extra request fields for this model only (empty = provider defaults).
+
+providers:
+  openai:
+    api: responses
+    base_url: https://api.openai.com/v1
+    env_key: AIM_OPENAI_API_KEY
+    env_key_fallback: OPENAI_API_KEY
+    search_price_per_1k_calls: 10.0
+    batch_discount: 0.5
+  anthropic:
+    api: messages
+    base_url: https://api.anthropic.com/v1
+    env_key: AIM_ANTHROPIC_API_KEY
+    env_key_fallback: null   # never fall back to ANTHROPIC_API_KEY (clashes with Claude Code sessions)
+    api_version: "2026-10-21"
+    search_price_per_1k_calls: 10.0
+    batch_discount: 0.5
+
+models:
+  # ---------------------------------------------------------------- OpenAI
+  - id: gpt-6-astra
+    provider: openai
+    role: flagship
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    release_date: "2026-09-03"
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: true
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: gpt-6.1-sol
+    provider: openai
+    role: mainstream
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    release_date: "2026-09-29"
+    knowledge_cutoff: null
+    price_in_per_m: 2.0
+    price_out_per_m: 10.0
+    price_verified: true
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: gpt-6.1-terra
+    provider: openai
+    role: mid
+    generation: current
+    size_class: medium
+    stages: [A, B]
+    release_date: "2026-10-26"
+    knowledge_cutoff: null
+    price_in_per_m: 1.0
+    price_out_per_m: 5.0
+    price_verified: true
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: gpt-6-luna
+    provider: openai
+    role: small
+    generation: current
+    size_class: small
+    stages: [A, B]
+    release_date: null
+    knowledge_cutoff: null
+    price_in_per_m: 0.10
+    price_out_per_m: 0.50
+    price_verified: true
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: gpt-5.6-sol
+    provider: openai
+    role: previous_flagship
+    generation: previous
+    size_class: large
+    stages: [A, B]
+    release_date: "2026-07-09"
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: false
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: gpt-5.5
+    provider: openai
+    role: two_back
+    generation: two_back
+    size_class: large
+    stages: [A, B]
+    release_date: "2026-04-01"
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: false
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: chat-latest
+    provider: openai
+    role: consumer_proxy
+    generation: current
+    size_class: large
+    stages: [A]
+    optional: true          # only planned when experiment.optional_arms.consumer_proxy.enabled
+    non_reproducible: true  # moving snapshot
+    release_date: null
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: false
+    reasoning_effort_default: null
+    request_extra: {}
+
+  # ---------------------------------------------------------------- Anthropic
+  - id: claude-fable-5-1
+    provider: anthropic
+    role: flagship
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    release_date: null
+    knowledge_cutoff: "2026-06"
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: true
+    reasoning_effort_default: high   # adaptive thinking always on
+    request_extra: {}
+  - id: claude-opus-5-5
+    provider: anthropic
+    role: mainstream
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    release_date: null
+    knowledge_cutoff: "2026-06"
+    price_in_per_m: 4.0
+    price_out_per_m: 20.0
+    price_verified: true
+    reasoning_effort_default: medium
+    request_extra: {}
+  - id: claude-sonnet-5-5
+    provider: anthropic
+    role: mid
+    generation: current
+    size_class: medium
+    stages: [A, B]
+    release_date: null
+    knowledge_cutoff: null
+    price_in_per_m: 2.0
+    price_out_per_m: 10.0
+    price_verified: true
+    reasoning_effort_default: null
+    request_extra: {}
+  - id: claude-haiku-5-5
+    provider: anthropic
+    role: small
+    generation: current
+    size_class: small
+    stages: [A, B]
+    release_date: null
+    knowledge_cutoff: null
+    price_in_per_m: 0.10
+    price_out_per_m: 0.50
+    price_verified: true
+    reasoning_effort_default: null
+    request_extra: {}
+  - id: claude-fable-5
+    provider: anthropic
+    role: previous_flagship
+    generation: previous
+    size_class: large
+    stages: [A, B]
+    release_date: "2026-06-09"
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: false
+    reasoning_effort_default: null
+    request_extra: {}
+  - id: claude-opus-4-8
+    provider: anthropic
+    role: two_back
+    generation: two_back
+    size_class: large
+    stages: [A, B]
+    release_date: null
+    knowledge_cutoff: null
+    price_in_per_m: 10.0
+    price_out_per_m: 50.0
+    price_verified: false
+    reasoning_effort_default: null
+    request_extra: {}
+
+# Never planned (BUILD_BRIEF §1.2):
+excluded:
+  - {id: "claude-mythos-*", reason: "restricted access"}
+  - {id: claude-haiku-4-5-20251001, reason: "retirement window opened 15 Oct 2026"}
+  - {id: claude-sonnet-4-5-20250929, reason: "retires 30 Nov 2026"}

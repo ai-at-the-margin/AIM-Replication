@@ -1,0 +1,24 @@
+# Estimation universes (BUILD_BRIEF §2.5).
+
+acwi_proxy:
+  description: "Compustat-built MSCI ACWI proxy, used when Datastream has no MSCI ACWI list"
+  country_field: loc            # HQ country; fic would drop Cayman/Bermuda-incorporated China/HK names
+  tpci: ["0"]                   # primary common equity
+  primary_issue_only: true
+  cumulative_mcap_cut: 0.85     # largest issuers per country until 85% of country cap
+  expected_count: [2500, 3000]
+  countries:
+    developed: [AUS, AUT, BEL, CAN, DNK, FIN, FRA, DEU, HKG, IRL, ISR, ITA, JPN, NLD, NZL, NOR, PRT, SGP, ESP, SWE, CHE, GBR, USA]
+    emerging: [BRA, CHL, CHN, COL, CZE, EGY, GRC, HUN, IND, IDN, KOR, KWT, MYS, MEX, PER, PHL, POL, QAT, SAU, ZAF, TWN, THA, TUR, ARE]
+
+us_broad:
+  description: "US-exchange common stock and ADRs, market cap >= $300m"
+  exchg: [11, 12, 14]           # NYSE, NYSE American, NASDAQ
+  tpci: ["0", "F"]              # common, ADR
+  min_mcap_usd: 3.0e8
+  secondary_benchmark: sp1500
+
+# Compustat exchg codes treated as US listings when flagging holdings.
+us_exchg_codes: [11, 12, 14, 19]
+# Compustat exchg codes for mainland China A-share venues (Shanghai, Shenzhen).
+china_a_exchg_codes: [249, 250]
