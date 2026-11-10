@@ -71,7 +71,8 @@ class Store:
         frame = frame.astype(object).where(pd.notna(frame), None)
         self.con.register("_incoming", frame)
         try:
-            self.con.execute(f"INSERT OR REPLACE INTO {table} SELECT {', '.join(select_parts)} FROM _incoming")
+            # Migrations append columns, so physical order can differ from TABLES.
+            self.con.execute(f"INSERT OR REPLACE INTO {table} BY NAME SELECT {', '.join(select_parts)} FROM _incoming")
         finally:
             self.con.unregister("_incoming")
         return len(frame)
@@ -101,7 +102,7 @@ class Store:
         return self.query(f"SELECT * FROM {name}")
 
     def count(self, name: str) -> int:
-        return int(self.con.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0])
+        return int(self.con.execute(f"SELECT COUNT(*) FROM {name}").fetchall()[0][0])
 
     def export_parquet(self, folder: Path) -> list[Path]:
         folder.mkdir(parents=True, exist_ok=True)

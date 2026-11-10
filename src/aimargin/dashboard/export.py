@@ -20,6 +20,7 @@ from typing import Any
 
 import pandas as pd
 
+from ..analysis.data import BASELINE_PROVIDERS
 from ..collect.cost import estimate_plan
 from ..collect.planner import plan
 from ..prompts import FREEFORM_IDS, MANDATE_IDS, build_prompt, experiment_version, prompt_version
@@ -50,15 +51,16 @@ def phases(ws: Workspace, config: Config, store: Store, planned: dict[str, int])
     factor_runs = read_json(ws.processed / "factor_runs.json", default={}) or {}
     resolution = read_json(ws.processed / "resolution_summary.json", default={}) or {}
     crsp = read_json(ws.processed / "crsp_validation.json", default=None)
-    calls = store.query("SELECT stage, model_requested, prompt_id, status FROM calls")
+    calls = store.query("SELECT stage, model_requested, prompt_id, status, provider FROM calls")
+    calls = calls[calls["provider"].isin(BASELINE_PROVIDERS)]
     completed = calls[calls["status"] == "completed"]
     out = []
     providers = state.get("providers") or {}
     providers_ok = len(providers) > 0
-    names = list(providers.keys())
-    for i in range(len(names)):
-        test = providers[names[i]].get("search_test") or {}
-        if not test.get("ok") or providers[names[i]].get("models_missing"):
+    for name in BASELINE_PROVIDERS:
+        entry = providers.get(name) or {}
+        test = entry.get("search_test") or {}
+        if not test.get("ok") or entry.get("models_missing"):
             providers_ok = False
     wrds = state.get("wrds") or {}
     p0 = "done" if providers_ok and wrds.get("connected") and not state.get("halt") else (
@@ -123,11 +125,15 @@ def export(ws: Workspace, config: Config, store: Store, target: Path | None = No
     if target.exists():
         shutil.rmtree(target)
     (target / "details").mkdir(parents=True, exist_ok=True)
-    specs = plan(config, ["A", "B", "C"])
+    specs = []
+    for spec in plan(config, ["A", "B", "C"]):
+        if spec.provider in BASELINE_PROVIDERS:
+            specs.append(spec)
     planned: dict[str, int] = {}
     for i in range(len(specs)):
         planned[specs[i].stage] = planned.get(specs[i].stage, 0) + 1
     calls_frame = store.query("SELECT * FROM calls")
+    calls_frame = calls_frame[calls_frame["provider"].isin(BASELINE_PROVIDERS)]
     estimate = estimate_plan(config, specs, calls_frame, batch_stages=["A", "B"])
     budget = {"estimated_total_usd": float(estimate["est_cost_usd"].sum()) if len(estimate) else 0.0,
               "by_stage": estimate.groupby("stage")["est_cost_usd"].sum().round(2).to_dict() if len(estimate) else {},
@@ -144,6 +150,8 @@ def export(ws: Workspace, config: Config, store: Store, target: Path | None = No
         for i in range(len(keys)):
             cutoffs[keys[i]] = PROFILES[keys[i]]["knowledge"][:7]
     for i in range(len(models)):
+        if models[i]["provider"] not in BASELINE_PROVIDERS:
+            continue
         roster.append({"id": models[i]["id"], "provider": models[i]["provider"], "role": models[i].get("role"),
                        "generation": models[i].get("generation"), "size_class": models[i].get("size_class"),
                        "stages": models[i].get("stages"), "optional": bool(models[i].get("optional")),
@@ -162,7 +170,7 @@ def export(ws: Workspace, config: Config, store: Store, target: Path | None = No
         "dataset": ws.name, "synthetic": ws.is_demo, "generated_ts_utc": utc_now_iso(),
         "experiment_version": experiment_version(config), "prompt_version": prompt_version(config),
         "asof": analysis.get("asof"), "universe": analysis.get("universe"), "roster": roster, "prompts": prompts,
-        "planned": planned, "repo": "AI at the Margin replication",
+        "planned": planned, "cohort": "baseline", "repo": "AI at the Margin replication",
     }
     write_json(target / "meta.json", meta)
     state = read_json(ws.processed / "phase0_state.json", default={}) or {}
@@ -188,6 +196,7 @@ def _export_portfolios(store: Store, target: Path, asof: str | None, universe: s
         "c.reasoning_tokens, c.latency_s, c.attempts, c.stop_reason, c.model_returned, c.via_batch, "
         "p.outcome, p.parse_method, p.n_names_raw, p.n_issuers, p.weights_provided "
         "FROM calls c LEFT JOIN portfolios p USING (call_id)")
+    calls = calls[calls["provider"].isin(BASELINE_PROVIDERS)]
     exposures = store.query("SELECT * FROM portfolio_exposures WHERE weighting = 'model' AND asof_date = ? "
                             "AND universe = ?", [asof, universe]) if asof else pd.DataFrame()
     exp_map: dict[str, dict[str, Any]] = {}

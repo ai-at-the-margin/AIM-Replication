@@ -53,20 +53,15 @@ aim verify
 ```
 
 ```bash
-aim plan --stage A --dry-run
+aim plan --stage A --dry-run --pilot 1
 ```
 
 ```bash
-aim collect --stage A --pilot 2
+aim collect --stage A --pilot 1
 ```
 
-```bash
-aim collect --stage A --batch
-```
-
-```bash
-aim batch-poll --stage A
-```
+The default pilot includes DeepSeek and Kimi. See the [runbook](docs/RUNBOOK.md)
+for credentials, direct collection, and baseline-only batch use.
 
 ```bash
 aim factors build --universe acwi_proxy

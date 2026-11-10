@@ -28,9 +28,12 @@ def render(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None
                 value = heat[r].get(FACTORS[c])
                 if value is not None:
                     matrix[MANDATES.index(heat[r]["mandate"]), c] = value
+    finite = matrix[np.isfinite(matrix)]
+    if len(finite) == 0:
+        return None
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
     ax = axes[0]
-    limit = max(0.6, float(np.nanmax(np.abs(matrix))))
+    limit = max(0.6, float(np.max(np.abs(finite))))
     ax.imshow(matrix, cmap=DIVERGING, vmin=-limit, vmax=limit, aspect="auto")
     for r in range(matrix.shape[0]):
         for c in range(matrix.shape[1]):

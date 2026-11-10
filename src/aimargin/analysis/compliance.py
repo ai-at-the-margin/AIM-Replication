@@ -45,7 +45,7 @@ def book_checks(data: AnalysisData, settings: dict[str, Any]) -> pd.DataFrame:
                 missing_cap = True
         pass_mcap = (not missing_cap) and len(caps) > 0 and float(pd.Series(caps).min()) >= float(settings["min_mcap_usd"])
         rows.append({"call_id": r["call_id"], "model": r["model_requested"], "prompt_id": r["prompt_id"],
-                     "stage": r["stage"], "search_invoked": bool((r.get("search_count") or 0) > 0),
+                     "stage": r["stage"], "search_invoked": bool(r["search_invoked"]) if pd.notna(r["search_invoked"]) else None,
                      "target_value": value, "target_exposure": pass_target, "max_weight": pass_weight,
                      "min_sectors": pass_sectors, "min_mcap": pass_mcap,
                      "pass_all": pass_target and pass_weight and pass_sectors and pass_mcap})
@@ -58,11 +58,13 @@ def compliance_analysis(data: AnalysisData, settings: dict[str, Any]) -> dict[st
         return {"rows": [], "funnel": []}
     checks["search_state"] = "offline"
     checks.loc[checks["stage"] == "C", "search_state"] = "connected_not_invoked"
-    checks.loc[(checks["stage"] == "C") & checks["search_invoked"], "search_state"] = "connected_invoked"
+    invoked = checks["search_invoked"].astype("boolean")
+    checks.loc[(checks["stage"] == "C") & invoked.fillna(False), "search_state"] = "connected_invoked"
+    checks.loc[(checks["stage"] == "C") & invoked.isna(), "search_state"] = "connected_search_unknown"
     rows = []
     models = present_models(data, checks.rename(columns={"model": "model_requested"}))
     for m in range(len(models)):
-        for state in ("offline", "connected_invoked", "connected_not_invoked"):
+        for state in ("offline", "connected_invoked", "connected_not_invoked", "connected_search_unknown"):
             for p in range(len(MANDATES)):
                 cell = checks[(checks["model"] == models[m]) & (checks["search_state"] == state)
                               & (checks["prompt_id"] == MANDATES[p])]

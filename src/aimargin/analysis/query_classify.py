@@ -112,22 +112,23 @@ def classify_rule(query: str | None, mentions: list[str]) -> str:
 
 def classify_all(store: Store, master: pd.DataFrame | None) -> dict[str, Any]:
     events = store.table("search_events")
-    if len(events) == 0:
+    visible = events[events["query_visible"].fillna(False) & events["query_text"].notna()].copy()
+    if len(visible) == 0:
         return {"classified": 0}
     holdings = store.query("SELECT call_id, raw_ticker, resolved_name, issuer_id FROM holdings")
     index = MentionIndex(master, holdings)
     classes = []
     mentioned = []
-    queries = events["query_text"].tolist()
-    for i in range(len(queries)):
-        found = index.find(queries[i] or "")
-        classes.append(classify_rule(queries[i], found))
+    queries = visible["query_text"].tolist()
+    for query in queries:
+        found = index.find(query)
+        classes.append(classify_rule(query, found))
         mentioned.append(json.dumps(found))
-    events["query_class"] = classes
-    events["mentioned_tickers_json"] = mentioned
-    events["class_method"] = "rules"
-    store.upsert("search_events", events)
-    return {"classified": len(events)}
+    visible["query_class"] = classes
+    visible["mentioned_tickers_json"] = mentioned
+    visible["class_method"] = "rules"
+    store.upsert("search_events", visible)
+    return {"classified": len(visible)}
 
 
 def cohen_kappa(a: list[str], b: list[str]) -> float | None:
@@ -148,13 +149,14 @@ def cohen_kappa(a: list[str], b: list[str]) -> float | None:
     return float((observed - expected) / (1.0 - expected))
 
 
-def gold_agreement(store: Store, gold_path: Path) -> dict[str, Any]:
+def gold_agreement(store: Store, gold_path: Path, call_ids: pd.Series) -> dict[str, Any]:
     if not gold_path.exists():
         return {"n": 0, "kappa": None, "note": "no gold file"}
     gold = pd.read_csv(gold_path, dtype=str).dropna(subset=["gold_class"])
     if len(gold) == 0:
         return {"n": 0, "kappa": None, "note": "gold file empty: label at least 200 queries"}
     events = store.query("SELECT call_id, event_idx, query_class FROM search_events")
+    events = events[events["call_id"].isin(call_ids)].copy()
     events["event_idx"] = events["event_idx"].astype(str)
     gold["event_idx"] = gold["event_idx"].astype(str)
     merged = gold.merge(events, on=["call_id", "event_idx"], how="inner")
@@ -165,10 +167,11 @@ def gold_agreement(store: Store, gold_path: Path) -> dict[str, Any]:
             "meets_minimum": len(merged) >= 200}
 
 
-def query_analysis(store: Store, gold_path: Path) -> dict[str, Any]:
+def query_analysis(store: Store, gold_path: Path, call_ids: pd.Series) -> dict[str, Any]:
     events = store.query(
         "SELECT s.*, c.provider, c.model_requested, c.prompt_id, c.stage, c.search_tool_version "
         "FROM search_events s JOIN calls c USING (call_id) WHERE c.stage = 'C'")
+    events = events[events["call_id"].isin(call_ids)]
     out: dict[str, Any] = {"classes": CLASSES}
     if len(events) == 0:
         out["by_prompt"] = []
@@ -248,5 +251,5 @@ def query_analysis(store: Store, gold_path: Path) -> dict[str, Any]:
                           "share_with_caller": float(cell["caller"].notna().mean()) if len(cell) else None,
                           "share_errors": float(cell["error_code"].notna().mean()) if len(cell) else None})
     out["anthropic_tool_versions"] = tool_rows
-    out["gold"] = gold_agreement(store, gold_path)
+    out["gold"] = gold_agreement(store, gold_path, call_ids)
     return out

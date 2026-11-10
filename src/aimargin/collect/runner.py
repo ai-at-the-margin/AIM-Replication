@@ -29,6 +29,7 @@ from ..providers.base import (
     TransportError,
     word_count,
 )
+from ..providers.native_search import SEARCH_MODELS
 from ..settings import Config, Workspace
 from ..store.db import Store
 from ..utils import get_logger, utc_now_iso, write_json
@@ -64,7 +65,8 @@ def raw_path_for(ws: Workspace, spec: CallSpec) -> Path:
 
 
 def persist_call(store: Store, config: Config, spec: CallSpec, run_id: str, raw_path: Path,
-                 normalised: NormalisedResponse | None, meta: dict[str, Any]) -> float:
+                 normalised: NormalisedResponse | None, meta: dict[str, Any],
+                 *, preserve_response: bool = False) -> float:
     """Write one call into calls/responses/search_events. Returns its cost."""
     model_cfg = config.model(spec.model_requested)
     provider_cfg = config.provider(spec.provider)
@@ -83,27 +85,35 @@ def persist_call(store: Store, config: Config, spec: CallSpec, run_id: str, raw_
     }
     if normalised is not None:
         cost = call_cost(model_cfg, provider_cfg, normalised.input_tokens, normalised.output_tokens,
-                         normalised.search_count, bool(meta.get("via_batch", False)))
+                         normalised.search_count, bool(meta.get("via_batch", False)), fetches=normalised.fetch_count)
         effort = normalised.reasoning_effort
-        if effort is None and model_cfg.get("reasoning_effort_default"):
-            effort = f"default:{model_cfg['reasoning_effort_default']}"
+        if effort is None:
+            if spec.search_enabled and spec.provider in SEARCH_MODELS:
+                tool = config.experiment["search_tools"][spec.provider]["default"]
+                requested = tool.get("reasoning_effort")
+                if requested is not None:
+                    effort = f"requested:{requested}"
+            elif model_cfg.get("reasoning_effort_default"):
+                effort = f"default:{model_cfg['reasoning_effort_default']}"
         row.update({
             "model_returned": normalised.model_returned,
             "reasoning_effort_effective": effort,
             "input_tokens": normalised.input_tokens, "output_tokens": normalised.output_tokens,
             "reasoning_tokens": normalised.reasoning_tokens, "search_count": normalised.search_count,
+            "search_invoked": normalised.search_invoked, "fetch_count": normalised.fetch_count,
             "est_cost_usd": cost, "stop_reason": normalised.stop_reason,
             "provider_refusal_flag": normalised.refusal_flag,
         })
         events = []
         for i in range(len(normalised.tool_events)):
             events.append(normalised.tool_events[i].as_dict())
-        store.upsert("responses", [{
-            "call_id": spec.call_id, "final_text": normalised.final_text,
-            "reasoning_text": normalised.reasoning_text,
-            "reasoning_word_count": word_count(normalised.reasoning_text),
-            "tool_events_json": json.dumps(events, ensure_ascii=False),
-        }])
+        if not preserve_response:
+            store.upsert("responses", [{
+                "call_id": spec.call_id, "final_text": normalised.final_text,
+                "reasoning_text": normalised.reasoning_text,
+                "reasoning_word_count": word_count(normalised.reasoning_text),
+                "tool_events_json": json.dumps(events, ensure_ascii=False),
+            }])
         search_rows = []
         for i in range(len(normalised.tool_events)):
             event = normalised.tool_events[i]
@@ -111,7 +121,9 @@ def persist_call(store: Store, config: Config, spec: CallSpec, run_id: str, raw_
                 "call_id": spec.call_id, "event_idx": event.event_idx,
                 "provider_event_type": event.provider_event_type, "query_text": event.query_text,
                 "query_visible": event.query_visible, "caller": event.caller,
-                "result_urls_json": json.dumps(event.result_urls), "error_code": event.error_code,
+                "result_urls_json": json.dumps(event.result_urls) if event.result_urls is not None else None,
+                "error_code": event.error_code, "action_type": event.action_type,
+                "tool_use_id": event.tool_use_id, "executed": event.executed,
             })
         store.replace_where("search_events", "call_id = ?", [spec.call_id], search_rows)
     store.upsert("calls", [row])
@@ -282,7 +294,8 @@ class Runner:
                 error = f"normalise failed: {exc!r}"
                 status = "completed"
                 normalised = NormalisedResponse(
-                    final_text="", reasoning_text="", tool_events=[], search_count=0, input_tokens=None,
+                    final_text="", reasoning_text="", tool_events=[], search_count=None if spec.search_enabled else 0,
+                    input_tokens=None,
                     output_tokens=None, reasoning_tokens=None, model_returned=None, stop_reason="malformed",
                     refusal_flag=False)
         meta = {

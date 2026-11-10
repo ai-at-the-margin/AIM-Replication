@@ -24,6 +24,8 @@ def ops_analysis(data: AnalysisData, store: Store, planned: dict[str, int]) -> d
             latency = cell["latency_s"].dropna()
             valid_n = int((cell["outcome"] == "valid").sum())
             cost = float(cell["est_cost_usd"].fillna(0).sum())
+            searches = cell["search_count"].dropna()
+            fetches = cell["fetch_count"].dropna()
             rows.append({"model": models[m], "provider": data.model_meta(models[m]).get("provider"), "stage": stage,
                          "calls": int(len(cell)), "completed": int((cell["status"] == "completed").sum()),
                          "errors": int((cell["status"] == "error").sum()), "valid": valid_n,
@@ -31,7 +33,10 @@ def ops_analysis(data: AnalysisData, store: Store, planned: dict[str, int]) -> d
                          "input_tokens": int(cell["input_tokens"].fillna(0).sum()),
                          "output_tokens": int(cell["output_tokens"].fillna(0).sum()),
                          "reasoning_tokens": int(cell["reasoning_tokens"].fillna(0).sum()),
-                         "searches": int(cell["search_count"].fillna(0).sum()),
+                         "searches": int(searches.sum()) if len(searches) else None,
+                         "search_counts_observed": int(len(searches)),
+                         "fetches": int(fetches.sum()) if len(fetches) else None,
+                         "fetch_counts_observed": int(len(fetches)),
                          "retried_calls": int((cell["attempts"].fillna(1) > 1).sum()),
                          "latency_p50": float(latency.quantile(0.5)) if len(latency) else None,
                          "latency_p95": float(latency.quantile(0.95)) if len(latency) else None})
@@ -43,8 +48,9 @@ def ops_analysis(data: AnalysisData, store: Store, planned: dict[str, int]) -> d
                          "valid": int((cell["outcome"] == "valid").sum()),
                          "cost_usd": float(cell["est_cost_usd"].fillna(0).sum())})
     holdings = store.query(
-        "SELECT h.resolution_status, h.resolution_method, h.is_adr, h.is_us_listed, c.model_requested, c.provider "
+        "SELECT h.call_id, h.resolution_status, h.resolution_method, h.is_adr, h.is_us_listed, c.model_requested, c.provider "
         "FROM holdings h JOIN calls c USING (call_id)")
+    holdings = holdings[holdings["call_id"].isin(calls["call_id"])]
     resolution = []
     groups = holdings.groupby("model_requested")
     keys = list(groups.groups.keys())

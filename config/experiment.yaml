@@ -51,6 +51,19 @@ search_tools:
       version: web_search_20250305
       tool: {type: web_search_20250305, name: web_search, max_uses: 10}
 
+  deepseek:
+    default:
+      version: deepseek_responses_web_search
+      tool: {type: web_search}
+      max_output_tokens: 8192
+      reasoning_effort: high
+  kimi:
+    default:
+      version: kimi_responses_web_search
+      tool: {type: web_search}
+      include: [web_search_call.action.sources]
+      max_output_tokens: 8192
+
 request:
   openai:
     store: false
@@ -59,9 +72,14 @@ request:
     max_tokens: 32000
     pause_turn_max: 6
 
+  deepseek:
+    max_tokens: 8192
+  kimi:
+    max_completion_tokens: 8192
+
 collection:
-  concurrency: {openai: 8, anthropic: 8}
-  requests_per_minute: {openai: 300, anthropic: 200}
+  concurrency: {openai: 8, anthropic: 8, deepseek: 2, kimi: 1}
+  requests_per_minute: {openai: 300, anthropic: 200, deepseek: 30, kimi: 10}
   max_attempts: 6
   base_delay_s: 2.0
   max_delay_s: 120.0
