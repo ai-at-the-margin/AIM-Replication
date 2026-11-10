@@ -20,7 +20,11 @@ def render(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None
     prompts = inv.get("prompts", [])
     matrix = np.full((len(models), len(prompts)), np.nan)
     for i in range(len(rows)):
-        matrix[models.index(rows[i]["model"]), prompts.index(rows[i]["prompt_id"])] = rows[i]["share_invoked"] * 100
+        share = rows[i]["share_invoked"]
+        if share is not None:
+            matrix[models.index(rows[i]["model"]), prompts.index(rows[i]["prompt_id"])] = share * 100
+    if not np.isfinite(matrix).any():
+        return None
     fig, ax = plt.subplots(figsize=(10, 0.6 * len(models) + 1.6))
     im = ax.imshow(matrix, cmap=SEQUENTIAL, vmin=0, vmax=100, aspect="auto")
     for r in range(matrix.shape[0]):
@@ -34,7 +38,7 @@ def render(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None
         labels.append(short_model(models[i]))
     ax.set_yticks(range(len(models)), labels)
     ax.set_xticks(range(len(prompts)), prompts, fontsize=8)
-    fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02, label="% of calls")
+    fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02, label="% of calls with known search status")
     ax.set_title("Share of calls that used web search (%): free-form | mandates")
     fig.tight_layout()
     return save(fig, folder, "fig6_invocation", rows, synthetic)

@@ -11,8 +11,9 @@ from .planner import CallSpec
 
 
 def call_cost(model_cfg: dict[str, Any], provider_cfg: dict[str, Any], input_tokens: float | None,
-              output_tokens: float | None, searches: float | None = 0, via_batch: bool = False) -> float:
-    """USD cost of one call from token usage (missing usage counts as zero)."""
+              output_tokens: float | None, searches: float | None = 0, via_batch: bool = False,
+              *, fetches: float | None = None) -> float:
+    """USD estimate from reported tokens and known billable tool operations."""
     price_in = float(model_cfg.get("price_in_per_m") or 0.0)
     price_out = float(model_cfg.get("price_out_per_m") or 0.0)
     tokens_in = float(input_tokens or 0.0)
@@ -21,7 +22,8 @@ def call_cost(model_cfg: dict[str, Any], provider_cfg: dict[str, Any], input_tok
     if via_batch:
         cost = cost * float(provider_cfg.get("batch_discount", 1.0))
     search_fee = float(provider_cfg.get("search_price_per_1k_calls", 0.0)) / 1000.0
-    cost += float(searches or 0.0) * search_fee
+    fetch_fee = float(provider_cfg.get("fetch_price_per_1k_calls", 0.0)) / 1000.0
+    cost += float(searches or 0.0) * search_fee + float(fetches or 0.0) * fetch_fee
     return round(cost, 6)
 
 
@@ -31,9 +33,9 @@ def _input_tokens_for(text: str, language: str) -> float:
     return float(len(text)) / 3.8 + 20.0
 
 
-def measured_usage(calls: pd.DataFrame | None) -> dict[tuple[str, bool], dict[str, float]]:
+def measured_usage(calls: pd.DataFrame | None) -> dict[tuple[str, bool], dict[str, float | None]]:
     """Mean usage per (model, search_enabled) from completed calls, if there are >= 2."""
-    out: dict[tuple[str, bool], dict[str, float]] = {}
+    out: dict[tuple[str, bool], dict[str, float | None]] = {}
     if calls is None or len(calls) == 0:
         return out
     done = calls[calls["status"] == "completed"]
@@ -45,10 +47,13 @@ def measured_usage(calls: pd.DataFrame | None) -> dict[tuple[str, bool], dict[st
         group = grouped.get_group(keys[i])
         if len(group) < 2:
             continue
+        searches = group["search_count"].dropna()
+        fetches = group["fetch_count"].dropna() if "fetch_count" in group else pd.Series(dtype=float)
         out[(str(keys[i][0]), bool(keys[i][1]))] = {
             "input_tokens": float(group["input_tokens"].fillna(0).mean()),
             "output_tokens": float(group["output_tokens"].fillna(0).mean()),
-            "search_count": float(group["search_count"].fillna(0).mean()),
+            "search_count": float(searches.mean()) if len(searches) else None,
+            "fetch_count": float(fetches.mean()) if len(fetches) else None,
             "n": float(len(group)),
         }
     return out
@@ -60,25 +65,32 @@ def estimate_spec(config: Config, spec: CallSpec, measured: dict | None = None,
     provider_cfg = config.provider(spec.provider)
     assumptions = config.experiment.get("token_assumptions", {})
     key = (spec.model_requested, bool(spec.search_enabled))
+    searches = 0.0
+    if spec.search_enabled:
+        rate = float(assumptions.get("search_invocation_rate_assumed", 0.6))
+        per_invocation = provider_cfg.get("searches_per_invocation_assumed",
+                                          assumptions.get("searches_per_call_when_enabled", 4))
+        searches = rate * float(per_invocation)
     basis = "assumption"
+    measured_fetches = None
     if measured and key in measured:
         usage = measured[key]
         tokens_in = usage["input_tokens"]
         tokens_out = usage["output_tokens"]
-        searches = usage["search_count"]
+        if usage["search_count"] is not None:
+            searches = usage["search_count"]
+        measured_fetches = usage.get("fetch_count")
         basis = f"measured(n={int(usage['n'])})"
     else:
         tokens_in = _input_tokens_for(spec.prompt_text, spec.language)
         by_role = assumptions.get("output_tokens_by_role", {})
         tokens_out = float(by_role.get(spec.role, 3000))
-        searches = 0.0
-        if spec.search_enabled:
-            rate = float(assumptions.get("search_invocation_rate_assumed", 0.6))
-            searches = rate * float(assumptions.get("searches_per_call_when_enabled", 4))
-            tokens_in += searches * float(assumptions.get("search_content_tokens_per_search", 3500))
-    cost = call_cost(model_cfg, provider_cfg, tokens_in, tokens_out, searches, via_batch)
+        tokens_in += searches * float(assumptions.get("search_content_tokens_per_search", 3500))
+    fetches = measured_fetches if measured_fetches is not None else (
+        searches * float(provider_cfg.get("fetches_per_search_assumed", 0.0)))
+    cost = call_cost(model_cfg, provider_cfg, tokens_in, tokens_out, searches, via_batch, fetches=fetches)
     return {
-        "est_input_tokens": tokens_in, "est_output_tokens": tokens_out, "est_searches": searches,
+        "est_input_tokens": tokens_in, "est_output_tokens": tokens_out, "est_searches": searches, "est_fetches": fetches,
         "est_cost_usd": cost, "basis": basis, "price_verified": bool(model_cfg.get("price_verified", False)),
     }
 
@@ -110,6 +122,7 @@ def summarise_estimate(estimate: pd.DataFrame) -> pd.DataFrame:
         est_input_tokens=("est_input_tokens", "sum"),
         est_output_tokens=("est_output_tokens", "sum"),
         est_searches=("est_searches", "sum"),
+        est_fetches=("est_fetches", "sum"),
         est_cost_usd=("est_cost_usd", "sum"),
         price_verified=("price_verified", "min"),
     )

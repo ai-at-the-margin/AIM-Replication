@@ -10,6 +10,8 @@ import pandas as pd
 from ..settings import Config
 from ..store.db import Store
 
+BASELINE_PROVIDERS = {"openai", "anthropic"}
+
 FACTOR_COLS = ["size", "value", "quality", "momentum", "lowvol", "beta"]
 ALL_FACTOR_COLS = ["size", "value", "quality", "momentum", "lowvol", "resvol", "beta", "mom_12_1", "value_blend"]
 FREEFORM = ["L1", "L2", "L3", "L4"]
@@ -47,15 +49,33 @@ class AnalysisData:
         return out
 
 
-def load(store: Store, config: Config, asof: str | None, universe: str = "acwi_proxy") -> AnalysisData:
+def load(store: Store, config: Config, asof: str | None, universe: str = "acwi_proxy",
+         *, cohort: str = "baseline") -> AnalysisData:
+    models = []
+    model_ids = set()
+    providers = dict.fromkeys(("openai", "anthropic"))
+    for model in config.model_list(include_optional=True):
+        provider = model["provider"]
+        if cohort == "expanded" or provider in BASELINE_PROVIDERS:
+            models.append(model)
+            model_ids.add(model["id"])
+            providers[provider] = None
     calls = store.query(
         "SELECT c.*, p.outcome, p.parse_status, p.parse_method, p.n_names_raw, p.n_issuers, "
         "p.weights_provided, p.weight_sum_raw FROM calls c LEFT JOIN portfolios p USING (call_id)")
+    calls = calls[calls["model_requested"].isin(model_ids)].copy()
+    call_ids = calls["call_id"]
+    # Older baseline calls have counts but no separate invocation flag.
+    invocation = calls["search_invoked"].astype("boolean")
+    legacy = calls["provider"].isin(BASELINE_PROVIDERS) & calls["search_count"].notna()
+    calls["search_invoked"] = invocation.mask(invocation.isna() & legacy, calls["search_count"].gt(0))
+    calls.loc[calls["search_enabled"].eq(False), "search_invoked"] = False  # noqa: E712
     calls["outcome"] = calls["outcome"].fillna("unparsed")
     valid = calls[calls["outcome"] == "valid"].copy()
     holdings = store.query(
         "SELECT h.*, c.stage, c.provider, c.model_requested, c.prompt_id, c.language, c.search_enabled, c.rep "
         "FROM holdings h JOIN calls c USING (call_id) JOIN portfolios p USING (call_id) WHERE p.outcome = 'valid'")
+    holdings = holdings[holdings["call_id"].isin(call_ids)]
     if asof is not None:
         pexp_all = store.query("SELECT * FROM portfolio_exposures WHERE asof_date = ? AND universe = ?",
                                [asof, universe])
@@ -66,21 +86,21 @@ def load(store: Store, config: Config, asof: str | None, universe: str = "acwi_p
         exposures = store.query("SELECT * FROM exposures WHERE 1 = 0")
         momentum_history = store.query("SELECT * FROM momentum_history WHERE 1 = 0")
     meta_cols = ["call_id", "stage", "provider", "model_requested", "role", "generation", "size_class",
-                 "prompt_id", "prompt_family", "language", "rep", "search_enabled", "search_count", "search_tool_version"]
+                 "prompt_id", "prompt_family", "language", "rep", "search_enabled", "search_count", "search_invoked", "search_tool_version"]
     pexp = pexp_all[pexp_all["weighting"] == "model"].merge(valid[meta_cols], on="call_id", how="inner")
     pexp_equal = pexp_all[pexp_all["weighting"] == "equal"].merge(valid[meta_cols], on="call_id", how="inner")
     search = store.query(
         "SELECT s.*, c.stage, c.provider, c.model_requested, c.prompt_id, c.search_tool_version "
         "FROM search_events s JOIN calls c USING (call_id)")
     responses = store.query("SELECT call_id, reasoning_word_count, reasoning_text FROM responses")
-    models = config.model_list(include_optional=True)
+    search = search[search["call_id"].isin(call_ids)]
+    responses = responses[responses["call_id"].isin(call_ids)]
     order = []
-    providers = ["openai", "anthropic"]
     roles = ["flagship", "mainstream", "mid", "small", "previous_flagship", "two_back", "consumer_proxy"]
-    for p in range(len(providers)):
+    for provider in providers:
         for r in range(len(roles)):
             for i in range(len(models)):
-                if models[i]["provider"] == providers[p] and models[i].get("role") == roles[r]:
+                if models[i]["provider"] == provider and models[i].get("role") == roles[r]:
                     order.append(models[i]["id"])
     return AnalysisData(calls=calls, valid=valid, holdings=holdings, pexp=pexp, pexp_equal=pexp_equal,
                         exposures=exposures, search=search, responses=responses,

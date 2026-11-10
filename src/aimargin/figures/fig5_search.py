@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +34,14 @@ def render(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None
     momentum = result.get("search", {}).get("momentum", {})
     tasks = momentum.get("by_task", [])
     models = momentum.get("momentum_mandate_by_model", [])
-    if len(tasks) == 0:
+    paired = False
+    for task in tasks:
+        before_mean = task["offline"]["mean"]
+        after_mean = task["connected"]["mean"]
+        if before_mean is not None and after_mean is not None and isfinite(before_mean) and isfinite(after_mean):
+            paired = True
+            break
+    if not paired:
         return None
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
     labels = []

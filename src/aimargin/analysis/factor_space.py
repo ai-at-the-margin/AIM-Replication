@@ -30,11 +30,12 @@ def pca_map(frame: pd.DataFrame, limit: int = 2500, rng: np.random.Generator | N
     explained = (s ** 2) / max(1e-12, (s ** 2).sum())
     coords = Xc @ vt[:2].T
     points = []
-    records = data[["call_id", "model_requested", "provider", "prompt_id", "stage", "search_count"]].to_dict("records")
+    records = data[["call_id", "model_requested", "provider", "prompt_id", "stage", "search_invoked"]].to_dict("records")
     for i in range(len(records)):
+        invoked = records[i]["search_invoked"]
         points.append({"call_id": records[i]["call_id"], "model": records[i]["model_requested"],
                        "provider": records[i]["provider"], "prompt_id": records[i]["prompt_id"],
-                       "stage": records[i]["stage"], "searched": bool((records[i]["search_count"] or 0) > 0),
+                       "stage": records[i]["stage"], "searched": bool(invoked) if pd.notna(invoked) else None,
                        "pc1": float(coords[i, 0]), "pc2": float(coords[i, 1])})
     loadings = []
     for k in range(min(2, len(vt))):

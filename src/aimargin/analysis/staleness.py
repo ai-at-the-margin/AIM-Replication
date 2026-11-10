@@ -37,7 +37,7 @@ def staleness_analysis(data: AnalysisData, cutoffs: dict[str, str] | None = None
         prompt, stage, label = cells[c]
         frame = holdings[(holdings["prompt_id"] == prompt) & (holdings["stage"] == stage)]
         if stage == "C":
-            searched = set(data.valid[(data.valid["stage"] == "C") & (data.valid["search_count"].fillna(0) > 0)]["call_id"])
+            searched = set(data.valid[(data.valid["stage"] == "C") & data.valid["search_invoked"].fillna(False)]["call_id"])
             frame = frame[frame["call_id"].isin(searched)]
             label = "connected (search invoked)"
         models = present_models(data, frame)

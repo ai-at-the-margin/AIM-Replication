@@ -8,7 +8,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .style import PROVIDER, SERIES, save, short_model
+from .style import MUTED, PROVIDER, PROVIDER_LABEL, SERIES, save, short_model
 
 
 def crowding(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None:
@@ -43,14 +43,17 @@ def factor_space(result: dict[str, Any], folder: Path, synthetic: bool) -> Path 
         return None
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
     ax = axes[0]
-    for provider, color in (("openai", PROVIDER["openai"]), ("anthropic", PROVIDER["anthropic"])):
+    by_provider: dict[str, list[dict[str, Any]]] = {}
+    for point in points:
+        by_provider.setdefault(point["provider"], []).append(point)
+    for provider, books in by_provider.items():
         xs = []
         ys = []
-        for i in range(len(points)):
-            if points[i]["provider"] == provider:
-                xs.append(points[i]["pc1"])
-                ys.append(points[i]["pc2"])
-        ax.scatter(xs, ys, s=9, alpha=0.45, color=color, label=provider, edgecolors="none")
+        for book in books:
+            xs.append(book["pc1"])
+            ys.append(book["pc2"])
+        ax.scatter(xs, ys, s=9, alpha=0.45, color=PROVIDER.get(provider, MUTED),
+                   label=PROVIDER_LABEL.get(provider, provider), edgecolors="none")
     explained = space.get("pca", {}).get("explained", [0, 0])
     ax.set_xlabel(f"PC1 ({explained[0] * 100:.0f}% of variance)")
     ax.set_ylabel(f"PC2 ({explained[1] * 100:.0f}%)" if len(explained) > 1 else "PC2")

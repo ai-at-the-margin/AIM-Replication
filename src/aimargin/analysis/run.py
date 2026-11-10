@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from ..collect.planner import plan
 from ..settings import Config, Workspace
 from ..store.db import Store
 from ..utils import get_logger, read_json, utc_now_iso, write_json
@@ -131,17 +133,25 @@ def pooled_means(frame: pd.DataFrame) -> dict[str, float | None]:
 
 
 def run_all(ws: Workspace, config: Config, store: Store, asof: str | None, universe: str,
-            planned: dict[str, int], draws: int | None = None, cutoffs: dict[str, str] | None = None,
-            master: pd.DataFrame | None = None) -> dict[str, Any]:
+            draws: int | None = None, cutoffs: dict[str, str] | None = None,
+            master: pd.DataFrame | None = None, *, cohort: str = "baseline") -> dict[str, Any]:
     settings = config.experiment.get("analysis", {})
     draws = int(draws or settings.get("bootstrap_draws", 2000))
     rng = np.random.default_rng(int(settings.get("seed", 1)))
     from .query_classify import classify_all
 
     classify_all(store, master)
-    data = load(store, config, asof, universe)
+    data = load(store, config, asof, universe, cohort=cohort)
+    model_ids = set()
+    for model in data.models:
+        model_ids.add(model["id"])
+    planned = dict.fromkeys(("A", "B", "C"), 0)
+    for spec in plan(config, list(planned)):
+        if spec.model_requested in model_ids:
+            planned[spec.stage] += 1
     result: dict[str, Any] = {"generated_ts_utc": utc_now_iso(), "asof": asof, "universe": universe,
-                              "workspace": ws.name, "bootstrap_draws": draws}
+                              "workspace": ws.name, "bootstrap_draws": draws,
+                              "cohort": cohort, "model_ids": sorted(model_ids)}
     log.info("overlap ...")
     result["overlap"] = overlap_analysis(data, draws, rng)
     log.info("consensus ...")
@@ -166,7 +176,7 @@ def run_all(ws: Workspace, config: Config, store: Store, asof: str | None, unive
     result["mandates"] = mandate_analysis(data, draws, rng)
     log.info("search ...")
     result["search"] = search_analysis(data, draws, rng)
-    result["queries"] = query_analysis(store, ws.manual / "query_labels_gold.csv")
+    result["queries"] = query_analysis(store, ws.manual / "query_labels_gold.csv", data.calls["call_id"])
     result["refusals"] = refusal_analysis(data)
     result["compliance"] = compliance_analysis(data, settings.get("compliance", {
         "target_exposure_min": 0.25, "max_weight": 0.15, "min_sectors": 4, "min_mcap_usd": 5e9}))
@@ -184,14 +194,15 @@ def run_all(ws: Workspace, config: Config, store: Store, asof: str | None, unive
     result["drops"] = drops(store)
     result["factor_runs"] = read_json(ws.processed / "factor_runs.json", default={})
     result["resolution_summary"] = read_json(ws.processed / "resolution_summary.json", default={})
-    result["paper_comparison"] = paper_comparison(result)
-    write_json(ws.outputs / "analysis.json", result)
-    _write_tables(ws, result)
+    result["paper_comparison"] = paper_comparison(result) if cohort == "baseline" else []
+    output = ws.outputs if cohort == "baseline" else ws.outputs / "expanded"
+    write_json(output / "analysis.json", result)
+    _write_tables(output / "tables", result)
     return result
 
 
-def _write_tables(ws: Workspace, result: dict[str, Any]) -> None:
-    ws.tables.mkdir(parents=True, exist_ok=True)
+def _write_tables(tables_dir: Path, result: dict[str, Any]) -> None:
+    tables_dir.mkdir(parents=True, exist_ok=True)
     tables = {
         "exposures_by_model_stage_a.csv": result["exposures"]["by_model_stage_a"],
         "exposures_by_framing.csv": result["exposures"]["by_framing_all"],
@@ -207,4 +218,4 @@ def _write_tables(ws: Workspace, result: dict[str, Any]) -> None:
     }
     names = list(tables.keys())
     for i in range(len(names)):
-        pd.DataFrame(tables[names[i]]).to_csv(ws.tables / names[i], index=False)
+        pd.DataFrame(tables[names[i]]).to_csv(tables_dir / names[i], index=False)

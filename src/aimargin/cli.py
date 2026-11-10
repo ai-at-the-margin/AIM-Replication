@@ -32,6 +32,11 @@ def _asof(ctx: Context, value: str | None) -> dt.date:
 @click.pass_context
 def main(click_ctx: click.Context, demo: bool, data_dir: str | None) -> None:
     """AI at the Margin: LLM-portfolio replication pipeline."""
+    if click_ctx.invoked_subcommand == "figures":
+        from .settings import get_workspace
+
+        click_ctx.obj = {"figure_workspace": get_workspace("demo" if demo else "live", data_dir)}
+        return
     click_ctx.obj = {"ctx": make_context(demo, data_dir)}
     click_ctx.call_on_close(lambda: click_ctx.obj["ctx"].close())
 
@@ -78,7 +83,25 @@ def _ensure_verified(ctx: Context, scope: str, skip: bool) -> None:
     if scope == "wrds" and ctx.demo:
         wrds_result = verify_wrds_synthetic(ctx.config, ctx.source(), ctx.default_asof() + dt.timedelta(days=1))
     run_verify(ctx.ws, ctx.config, ctx.transport_factory(), wrds_result, providers=scope == "providers",
-               wrds=scope == "wrds")
+               wrds=scope == "wrds", search_test=False)
+
+
+def _check_batch(specs) -> None:
+    from .collect.batch import check_batch_plan
+
+    try:
+        check_batch_plan(specs)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _plan_collection(ctx: Context, stage: str, pilot: int | None):
+    from .collect.planner import plan_stage
+
+    try:
+        return plan_stage(ctx.config, stage, pilot)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 # ------------------------------------------------------------- Phases 1, 2, 5
@@ -95,10 +118,11 @@ def _dryrun_marker(ctx: Context, stage: str, pilot: int | None):
 def plan(obj: dict, stage: str, dry_run: bool, pilot: int | None, batch: bool) -> None:
     """Expand the design into calls and estimate the cost."""
     from .collect.cost import estimate_plan, summarise_estimate
-    from .collect.planner import plan_stage
 
     ctx = _ctx(obj)
-    specs = plan_stage(ctx.config, stage, pilot)
+    specs = _plan_collection(ctx, stage, pilot)
+    if batch:
+        _check_batch(specs)
     calls = ctx.store.query("SELECT * FROM calls")
     estimate = estimate_plan(ctx.config, specs, calls, batch_stages=[stage] if batch else [])
     summary = summarise_estimate(estimate)
@@ -130,11 +154,10 @@ def plan(obj: dict, stage: str, dry_run: bool, pilot: int | None, batch: bool) -
 def collect(obj: dict, stage: str, pilot: int | None, batch: bool, resume: bool, skip_verify: bool, yes: bool) -> None:
     """Send the planned calls (idempotent; resumable)."""
     from .collect import batch as batch_mod
-    from .collect.planner import plan_stage
     from .collect.runner import Runner, summarise_calls
 
     ctx = _ctx(obj)
-    specs = plan_stage(ctx.config, stage, pilot)
+    specs = _plan_collection(ctx, stage, pilot)
     ids = []
     for i in range(len(specs)):
         ids.append(specs[i].call_id)
@@ -142,8 +165,10 @@ def collect(obj: dict, stage: str, pilot: int | None, batch: bool, resume: bool,
     if not ctx.demo and (marker is None or marker.get("plan_hash") != stable_hash(ids)):
         raise click.ClickException(f"run `aim plan --stage {stage}{' --pilot ' + str(pilot) if pilot else ''} "
                                    "--dry-run` first (BUILD_BRIEF §0.4: never spend budget without a dry run)")
-    if batch and stage == "C":
-        raise click.ClickException("Stage C uses web search and is never batched")
+    if batch:
+        if stage == "C":
+            raise click.ClickException("Stage C uses web search and is never batched")
+        _check_batch(specs)
     _ensure_verified(ctx, "providers", skip_verify)
     if not yes and not ctx.demo:
         click.confirm(f"Send {len(specs):,} calls for stage {stage} (estimated ${marker['estimated_usd']:,.2f})?",
@@ -295,16 +320,6 @@ def exposures(obj: dict, asof: str | None, universe: str) -> None:
 
 
 # --------------------------------------------------------------- Phase 6
-def _planned(ctx: Context) -> dict[str, int]:
-    from .collect.planner import plan
-
-    specs = plan(ctx.config, STAGES)
-    out: dict[str, int] = {}
-    for i in range(len(specs)):
-        out[specs[i].stage] = out.get(specs[i].stage, 0) + 1
-    return out
-
-
 def _cutoffs(ctx: Context) -> dict[str, str] | None:
     if not ctx.demo:
         return None
@@ -321,31 +336,36 @@ def _cutoffs(ctx: Context) -> dict[str, str] | None:
 @click.option("--asof", default=None)
 @click.option("--universe", type=click.Choice(["acwi_proxy", "us_broad"]), default="acwi_proxy")
 @click.option("--draws", type=int, default=None, help="Bootstrap draws (default from experiment.yaml).")
+@click.option("--cohort", type=click.Choice(["baseline", "expanded"]), default="baseline")
 @click.pass_obj
-def analyze(obj: dict, asof: str | None, universe: str, draws: int | None) -> None:
+def analyze(obj: dict, asof: str | None, universe: str, draws: int | None, cohort: str) -> None:
     """Run every analysis; writes outputs/analysis.json and CSV tables."""
     from .analysis.run import run_all
     from .pipeline import latest_factor_run, load_master
 
     ctx = _ctx(obj)
     date = asof or latest_factor_run(ctx.ws, universe)[0]
-    result = run_all(ctx.ws, ctx.config, ctx.store, date, universe, _planned(ctx), draws, _cutoffs(ctx),
-                     load_master(ctx.ws))
-    click.echo(f"analysis written ({len(result['paper_comparison'])} headline comparisons)")
+    result = run_all(ctx.ws, ctx.config, ctx.store, date, universe, draws, _cutoffs(ctx),
+                     load_master(ctx.ws), cohort=cohort)
+    click.echo(f"{result['cohort']} analysis written")
 
 
 @main.command()
+@click.option("--cohort", type=click.Choice(["baseline", "expanded"]), default="baseline", show_default=True)
 @click.pass_obj
-def figures(obj: dict) -> None:
-    """Render Figures 1-7 and the extension figures (PNG + CSV)."""
+def figures(obj: dict, cohort: str) -> None:
+    """Render figures and their CSVs from saved cohort analysis."""
     from .figures import render_all
 
-    ctx = _ctx(obj)
-    result = read_json(ctx.ws.outputs / "analysis.json", default=None)
+    ws = obj["figure_workspace"]
+    output = ws.outputs if cohort == "baseline" else ws.outputs / "expanded"
+    result = read_json(output / "analysis.json", default=None)
     if result is None:
-        raise click.ClickException("run `aim analyze` first")
-    paths = render_all(result, ctx.ws.figures, ctx.demo)
-    click.echo(f"{len(paths)} figures in {ctx.ws.figures}")
+        command = "aim analyze" if cohort == "baseline" else "aim analyze --cohort expanded"
+        raise click.ClickException(f"run `{command}` first")
+    folder = output / "figures"
+    paths = render_all(result, folder, ws.is_demo)
+    click.echo(f"{len(paths)} {cohort} figures in {folder}")
 
 
 @main.command()
@@ -428,7 +448,7 @@ def refresh(obj: dict, asof: str | None, universe: str, draws: int | None) -> No
     date = asof or latest_factor_run(ctx.ws, universe)[0]
     if date is not None:
         compute_exposures(ctx.store, date, universe)
-    result = run_all(ctx.ws, ctx.config, ctx.store, date, universe, _planned(ctx), draws, _cutoffs(ctx), master)
+    result = run_all(ctx.ws, ctx.config, ctx.store, date, universe, draws, _cutoffs(ctx), master)
     render_all(result, ctx.ws.figures, ctx.demo)
     write_results(ctx.ws)
     export(ctx.ws, ctx.config, ctx.store)

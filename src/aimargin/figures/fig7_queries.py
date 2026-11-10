@@ -44,6 +44,6 @@ def render(result: dict[str, Any], folder: Path, synthetic: bool) -> Path | None
     ax.set_xlim(0, 100)
     ax.set_xlabel("share of search queries (%)")
     ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=5)
-    ax.set_title("What they search for, by prompt (both providers expose queries)")
+    ax.set_title("What they search for, by prompt (visible queries)")
     fig.tight_layout()
     return save(fig, folder, "fig7_queries", rows, synthetic)

@@ -15,7 +15,7 @@ from typing import Any
 import pandas as pd
 
 from ..analysis.run import run_all
-from ..collect.planner import plan, plan_stage
+from ..collect.planner import plan_stage
 from ..collect.runner import Runner
 from ..context import DEMO_ASOF, Context
 from ..dashboard.export import export
@@ -96,15 +96,11 @@ def run_demo(ctx: Context, fresh: bool = False, draws: int | None = None) -> dic
     summary["exposures"] = compute_exposures(ctx.store, asof, "acwi_proxy")
     write_json(ctx.ws.processed / "crsp_validation.json",
                {"pass": None, "note": "synthetic demo world has no CRSP counterpart"})
-    planned: dict[str, int] = {}
-    all_specs = plan(ctx.config, stages)
-    for i in range(len(all_specs)):
-        planned[all_specs[i].stage] = planned.get(all_specs[i].stage, 0) + 1
     cutoffs = {}
     keys = list(PROFILES.keys())
     for i in range(len(keys)):
         cutoffs[keys[i]] = PROFILES[keys[i]]["knowledge"]
-    result = run_all(ctx.ws, ctx.config, ctx.store, asof, "acwi_proxy", planned, draws, cutoffs, master)
+    result = run_all(ctx.ws, ctx.config, ctx.store, asof, "acwi_proxy", draws, cutoffs, master)
     summary["figures"] = len(render_all(result, ctx.ws.figures, True))
     summary["results_md"] = write_results(ctx.ws)
     try:

@@ -7,6 +7,7 @@ from typing import Any
 from ..settings import Config
 from .anthropic_adapter import AnthropicAdapter
 from .base import ProviderAdapter, Transport
+from .chat_completions import DeepSeekAdapter, KimiAdapter
 from .openai_adapter import OpenAIAdapter
 
 
@@ -15,6 +16,10 @@ def make_adapter(provider: str, config: Config, transport: Transport, api_key: s
         return OpenAIAdapter(config, transport, api_key)
     if provider == "anthropic":
         return AnthropicAdapter(config, transport, api_key)
+    if provider == "deepseek":
+        return DeepSeekAdapter(config, transport, api_key)
+    if provider == "kimi":
+        return KimiAdapter(config, transport, api_key)
     raise ValueError(f"unknown provider {provider!r}")
 
 

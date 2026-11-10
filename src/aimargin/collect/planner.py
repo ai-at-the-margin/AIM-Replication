@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from ..prompts import build_prompt, experiment_version, prompt_family, prompt_version
+from ..providers.native_search import require_native_search
 from ..settings import Config
 from ..utils import stable_hash
 
@@ -101,6 +102,8 @@ def plan_stage(config: Config, stage: str, pilot: int | None = None) -> list[Cal
             provider = model["provider"]
             if arm["providers"] is not None and provider not in arm["providers"]:
                 continue
+            if search and provider not in ("openai", "anthropic"):
+                require_native_search(provider, model["id"])
             tool_version = _search_tool_version(config, provider, arm["variant"]) if search else None
             for p in range(len(arm_prompts)):
                 prompt = build_prompt(config, arm_prompts[p], arm["language"])

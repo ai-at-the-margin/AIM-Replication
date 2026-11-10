@@ -208,8 +208,18 @@ class SimulatedTransport(Transport):
                                  status=status, retry_after=0.01, retryable=True)
         if url.endswith("/responses"):
             body = self._openai(json_body, call_id, context)
+            if str(json_body["model"]).startswith("deepseek-"):
+                count = 0
+                for item in body["output"]:
+                    if item["type"] == "web_search_call" and item["status"] == "completed":
+                        if item["action"]["type"] == "search":
+                            count += 1
+                if count:
+                    body["usage"]["server_tool_use"] = {"tool_search": count, "tool_fetch": 0}
         elif url.endswith("/messages"):
             body = self._anthropic(json_body, call_id, context)
+        elif url.endswith("/chat/completions"):
+            body = self._chat_completions(json_body, call_id, context)
         else:
             raise TransportError(f"HTTP 404: simulated transport has no route for {url}", status=404,
                                  retryable=False)
@@ -543,6 +553,16 @@ class SimulatedTransport(Transport):
                       "output_tokens_details": {"reasoning_tokens": reasoning_tokens},
                       "total_tokens": tokens_in + tokens_out},
         }
+
+    def _chat_completions(self, body: dict[str, Any], call_id: str, context: dict[str, Any]) -> dict[str, Any]:
+        model = str(body["model"])
+        prompt = body["messages"][0]["content"]
+        reasoning, text = self._texts(self._answer(model, prompt, False, call_id, context))
+        tokens_in, tokens_out, reasoning_tokens = self._usage(prompt, text, reasoning, 0)
+        return {"model": model, "choices": [{"message": {"content": text, "reasoning_content": reasoning},
+                                             "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": tokens_in, "completion_tokens": tokens_out,
+                          "completion_tokens_details": {"reasoning_tokens": reasoning_tokens}}}
 
     def _anthropic(self, body: dict[str, Any], call_id: str, context: dict[str, Any]) -> dict[str, Any]:
         model = str(body.get("model"))

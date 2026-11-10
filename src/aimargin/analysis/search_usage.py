@@ -1,7 +1,7 @@
 """Search on vs off (BUILD_BRIEF §8.5-8.6, Figures 5-6).
 
-"Invoked search" means at least one executed search event; tool availability
-alone does not count.
+Invocation uses observed tool activity. Missing telemetry stays unknown.
+Reported operation counts can differ from invocation, for example for a failed search.
 """
 
 from __future__ import annotations
@@ -24,10 +24,12 @@ def invocation(data: AnalysisData) -> dict[str, Any]:
             cell = calls[(calls["model_requested"] == models[m]) & (calls["prompt_id"] == prompts[p])]
             if len(cell) == 0:
                 continue
-            invoked = (cell["search_count"].fillna(0) > 0)
+            observed = cell["search_invoked"].dropna()
+            counts = cell.loc[cell["search_invoked"].fillna(False), "search_count"].dropna()
             rows.append({"model": models[m], "prompt_id": prompts[p], "n": int(len(cell)),
-                         "share_invoked": float(invoked.mean()),
-                         "mean_searches_when_invoked": float(cell.loc[invoked, "search_count"].mean()) if invoked.any() else 0.0})
+                         "n_observed": int(len(observed)), "n_unknown": int(len(cell) - len(observed)),
+                         "share_invoked": float(observed.mean()) if len(observed) else None,
+                         "mean_searches_when_invoked": float(counts.mean()) if len(counts) else None})
     return {"models": models, "prompts": prompts, "rows": rows}
 
 
@@ -45,21 +47,25 @@ def on_off(data: AnalysisData, draws: int, rng: np.random.Generator, factor: str
         off = offline[offline["prompt_id"].isin(prompts)][factor].to_numpy(dtype=float)
         on_cell = connected[connected["prompt_id"].isin(prompts)]
         on = on_cell[factor].to_numpy(dtype=float)
-        invoked = on_cell[on_cell["search_count"].fillna(0) > 0][factor].to_numpy(dtype=float)
-        not_invoked = on_cell[on_cell["search_count"].fillna(0) == 0][factor].to_numpy(dtype=float)
-        share = float((on_cell["search_count"].fillna(0) > 0).mean()) if len(on_cell) else None
+        observed = on_cell["search_invoked"].dropna()
+        invoked = on_cell[on_cell["search_invoked"].fillna(False)][factor].to_numpy(dtype=float)
+        not_invoked = on_cell[~on_cell["search_invoked"].fillna(True)][factor].to_numpy(dtype=float)
+        share = float(observed.mean()) if len(observed) else None
         by_task.append({"task": label, "offline": mean_ci(off, draws, rng), "connected": mean_ci(on, draws, rng),
                         "connected_invoked": mean_ci(invoked, draws, rng),
                         "connected_not_invoked": mean_ci(not_invoked, draws, rng),
-                        "change": diff_ci(on, off, draws, rng), "share_invoked": share})
+                        "change": diff_ci(on, off, draws, rng), "share_invoked": share,
+                        "n_search_unknown": int(len(on_cell) - len(observed))})
     by_model = []
     for m in range(len(models_c)):
         off = offline[(offline["model_requested"] == models_c[m]) & (offline["prompt_id"] == "MOMENTUM")][factor]
         on_cell = connected[(connected["model_requested"] == models_c[m]) & (connected["prompt_id"] == "MOMENTUM")]
+        observed = on_cell["search_invoked"].dropna()
         by_model.append({"model": models_c[m], "provider": data.model_meta(models_c[m]).get("provider"),
                          "offline": mean_ci(off.to_numpy(dtype=float), draws, rng),
                          "connected": mean_ci(on_cell[factor].to_numpy(dtype=float), draws, rng),
-                         "share_invoked": float((on_cell["search_count"].fillna(0) > 0).mean()) if len(on_cell) else None})
+                         "share_invoked": float(observed.mean()) if len(observed) else None,
+                         "n_search_unknown": int(len(on_cell) - len(observed))})
     return {"factor": factor, "by_task": by_task, "momentum_mandate_by_model": by_model}
 
 

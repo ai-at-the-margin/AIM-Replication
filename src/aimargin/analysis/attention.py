@@ -49,11 +49,12 @@ def attention_analysis(data: AnalysisData) -> dict[str, Any]:
     picks = data.holdings.dropna(subset=["issuer_id"]).copy()
     picks["analyst_pct"] = picks["issuer_id"].map(analyst)
     picks["news_pct"] = picks["issuer_id"].map(news)
-    calls = data.valid[["call_id", "search_count"]]
+    calls = data.valid[["call_id", "search_invoked"]]
     picks = picks.merge(calls, on="call_id", how="left")
     picks["search_state"] = np.where(picks["stage"] != "C", "offline",
-                                     np.where(picks["search_count"].fillna(0) > 0, "connected_invoked",
-                                              "connected_not_invoked"))
+                                     np.where(picks["search_invoked"].isna(), "connected_search_unknown",
+                                              np.where(picks["search_invoked"].fillna(False), "connected_invoked",
+                                                       "connected_not_invoked")))
     rows = []
     groups = picks.groupby(["prompt_id", "search_state"])
     keys = list(groups.groups.keys())

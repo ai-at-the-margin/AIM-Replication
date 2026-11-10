@@ -12,7 +12,8 @@ import pandas as pd  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 
 SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
-PROVIDER = {"openai": "#2a78d6", "anthropic": "#eb6834"}
+PROVIDER = {"openai": "#2a78d6", "anthropic": "#eb6834", "deepseek": "#1baf7a", "kimi": "#6250d6"}
+PROVIDER_LABEL = {"openai": "OpenAI", "anthropic": "Anthropic", "deepseek": "DeepSeek", "kimi": "Kimi"}
 INK = "#0b0b0b"
 INK_2 = "#52514e"
 MUTED = "#898781"
@@ -50,4 +51,8 @@ def save(fig: plt.Figure, folder: Path, name: str, table: pd.DataFrame | list | 
 
 
 def short_model(model: str) -> str:
-    return model.replace("claude-", "c-").replace("gpt-", "g-")
+    prefixes = {"claude-": "c-", "gpt-": "g-", "deepseek-": "ds-", "kimi-": "k-"}
+    for prefix, short in prefixes.items():
+        if model.startswith(prefix):
+            return short + model[len(prefix):]
+    return model

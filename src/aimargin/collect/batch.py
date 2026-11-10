@@ -20,6 +20,21 @@ from .planner import CallSpec
 from .runner import persist_call, raw_path_for
 
 log = get_logger(__name__)
+BATCH_PROVIDERS = {"openai", "anthropic"}
+
+
+def _check_batch_providers(providers: set[str]) -> None:
+    unsupported = providers - BATCH_PROVIDERS
+    if unsupported:
+        names = ", ".join(sorted(unsupported))
+        raise ValueError(f"Batch API is unavailable for {names}. Use direct collection or a baseline-only roster.")
+
+
+def check_batch_plan(specs: list[CallSpec]) -> None:
+    providers = set()
+    for spec in specs:
+        providers.add(spec.provider)
+    _check_batch_providers(providers)
 
 
 def _ledger_path(ws: Workspace):
@@ -36,6 +51,7 @@ def save_ledger(ws: Workspace, ledger: list[dict[str, Any]]) -> None:
 
 async def submit(ws: Workspace, config: Config, store: Store, transport: Transport, specs: list[CallSpec],
                  run_id: str, max_per_batch: int = 5000) -> list[dict[str, Any]]:
+    check_batch_plan(specs)
     done = store.query("SELECT call_id FROM calls WHERE status = 'completed'")
     done_ids = set()
     values = done["call_id"].tolist()
@@ -106,6 +122,11 @@ async def submit(ws: Workspace, config: Config, store: Store, transport: Transpo
 async def poll(ws: Workspace, config: Config, store: Store, transport: Transport,
                specs_by_id: dict[str, CallSpec]) -> dict[str, int]:
     ledger = load_ledger(ws)
+    providers = set()
+    for entry in ledger:
+        if entry.get("state") != "collected":
+            providers.add(entry["provider"])
+    _check_batch_providers(providers)
     counts = {"open": 0, "collected": 0, "results_written": 0}
     for b in range(len(ledger)):
         entry = ledger[b]

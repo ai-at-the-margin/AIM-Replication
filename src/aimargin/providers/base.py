@@ -9,6 +9,7 @@ from __future__ import annotations
 import abc
 import contextvars
 import email.utils
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -88,9 +89,15 @@ class HttpTransport(Transport):
         except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as exc:
             raise TransportError(f"network error: {exc.__class__.__name__}: {exc}", retryable=True)
         text = response.text
+        if response.status_code >= 400:
+            for name, value in headers.items():
+                if name.lower() in ("authorization", "x-api-key"):
+                    secret = value.removeprefix("Bearer ").strip()
+                    if secret:
+                        text = text.replace(secret, "[redacted]")
         try:
-            payload = response.json()
-        except Exception:
+            payload = json.loads(text) if response.status_code >= 400 else response.json()
+        except ValueError:
             payload = None
         header_map: dict[str, str] = {}
         keys = list(response.headers.keys())
@@ -121,11 +128,11 @@ class ToolEvent:
     query_text: str | None = None
     query_visible: bool = False
     caller: str | None = None
-    result_urls: list[str] = field(default_factory=list)
+    result_urls: list[str] | None = field(default_factory=list)
     error_code: str | None = None
     action_type: str | None = None
     tool_use_id: str | None = None
-    executed: bool = True
+    executed: bool | None = True
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -141,7 +148,7 @@ class NormalisedResponse:
     final_text: str
     reasoning_text: str
     tool_events: list[ToolEvent]
-    search_count: int
+    search_count: int | None
     input_tokens: int | None
     output_tokens: int | None
     reasoning_tokens: int | None
@@ -150,6 +157,8 @@ class NormalisedResponse:
     refusal_flag: bool
     reasoning_effort: str | None = None
     notes: list[str] = field(default_factory=list)
+    search_invoked: bool | None = None
+    fetch_count: int | None = None
 
 
 class ProviderAdapter(abc.ABC):

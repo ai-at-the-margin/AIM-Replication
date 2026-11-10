@@ -6,8 +6,8 @@
 #                      dry-run flags these and `aim verify` reminds you to fill them in.
 # knowledge_cutoff     stated training cutoff from the model page (YYYY-MM or null).
 # reasoning_effort_default
-#                      what the provider documents as the default; we never override it.
-#                      The effective value is read back from each response when exposed.
+#                      configured or provider-default reasoning effort, used when the
+#                      API does not report the effective value.
 # request_extra        extra request fields for this model only (empty = provider defaults).
 
 providers:
@@ -26,6 +26,20 @@ providers:
     api_version: "2026-10-21"
     search_price_per_1k_calls: 10.0
     batch_discount: 0.5
+
+  deepseek:
+    api: chat_completions
+    base_url: https://api.deepseek.com
+    env_key: AIM_DEEPSEEK_API_KEY
+    search_price_per_1k_calls: 0.75
+    fetch_price_per_1k_calls: 0.75
+    fetches_per_search_assumed: 1.0
+  kimi:
+    api: chat_completions
+    base_url: https://api.moonshot.ai/v1
+    env_key: AIM_KIMI_API_KEY
+    search_price_per_1k_calls: 5.0
+    searches_per_invocation_assumed: 1.0
 
 models:
   # ---------------------------------------------------------------- OpenAI
@@ -202,6 +216,54 @@ models:
     price_verified: false
     reasoning_effort_default: null
     request_extra: {}
+
+  # DeepSeek public peak rates, using cache-miss input pricing.
+  - id: deepseek-v4-pro
+    provider: deepseek
+    role: flagship
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    price_in_per_m: 1.32
+    price_out_per_m: 3.96
+    price_verified: true
+    reasoning_effort_default: high
+    request_extra: {reasoning_effort: high}
+  - id: deepseek-flash
+    provider: deepseek
+    role: small
+    generation: current
+    size_class: small
+    stages: [A, B]
+    price_in_per_m: 0.30
+    price_out_per_m: 1.20
+    price_verified: true
+    reasoning_effort_default: high
+    request_extra: {reasoning_effort: high}
+
+  # Moonshot public standard rates, using uncached input pricing.
+  - id: kimi-k3.1-pro
+    provider: kimi
+    role: flagship
+    generation: current
+    size_class: large
+    stages: [A, B, C]
+    price_in_per_m: 2.00
+    price_out_per_m: 10.00
+    price_verified: true
+    reasoning_effort_default: high
+    request_extra: {reasoning_effort: high}
+  - id: kimi-k3
+    provider: kimi
+    role: previous_flagship
+    generation: previous
+    size_class: large
+    stages: [A, B, C]
+    price_in_per_m: 3.00
+    price_out_per_m: 15.00
+    price_verified: true
+    reasoning_effort_default: high
+    request_extra: {reasoning_effort: high}
 
 # Never planned (BUILD_BRIEF §1.2):
 excluded:

@@ -52,7 +52,8 @@ class OpenAIAdapter(ProviderAdapter):
         response = await self.transport.request("POST", self.base_url + "/responses", self.headers(), request)
         return {"provider": "openai", "responses": [response.json], "http_status": response.status}
 
-    def normalise(self, raw: dict[str, Any]) -> NormalisedResponse:
+    @staticmethod
+    def normalise(raw: dict[str, Any]) -> NormalisedResponse:
         responses = raw.get("responses") or []
         body = responses[-1] if len(responses) > 0 and isinstance(responses[-1], dict) else {}
         output = body.get("output") or []

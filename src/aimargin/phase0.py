@@ -40,7 +40,11 @@ async def verify_providers(config: Config, transport_factory: Callable[[], Trans
     out: dict[str, Any] = {}
     transport = transport_factory()
     try:
-        for provider in ("openai", "anthropic"):
+        models = config.model_list(include_optional=True)
+        providers: dict[str, list[str]] = {}
+        for model in models:
+            providers.setdefault(model["provider"], []).append(model["id"])
+        for provider, model_ids in providers.items():
             entry: dict[str, Any] = {"key_present": False, "models_ok": [], "models_missing": [],
                                      "list_error": None, "search_test": None}
             key = api_key_for(provider, config)
@@ -52,19 +56,16 @@ async def verify_providers(config: Config, transport_factory: Callable[[], Trans
             adapter = make_adapter(provider, config, transport, key)
             try:
                 listed = set(await adapter.list_models())
-                models = config.model_list(include_optional=True)
-                for i in range(len(models)):
-                    if models[i]["provider"] != provider:
-                        continue
-                    if models[i]["id"] in listed:
-                        entry["models_ok"].append(models[i]["id"])
+                for model_id in model_ids:
+                    if model_id in listed:
+                        entry["models_ok"].append(model_id)
                     else:
-                        entry["models_missing"].append(models[i]["id"])
+                        entry["models_missing"].append(model_id)
             except TransportError as exc:
                 entry["list_error"] = str(exc)[:300]
             except Exception as exc:
                 entry["list_error"] = f"{exc.__class__.__name__}: {exc}"[:300]
-            if search_test:
+            if search_test and SEARCH_TEST_MODEL.get(provider) in entry["models_ok"]:
                 entry["search_test"] = await _search_test(config, adapter, provider)
             out[provider] = entry
     finally:
